@@ -20,7 +20,7 @@
         width: 100%;
     }
     .login-header {
-        background: linear-gradient(135deg, var(--primary-color), #3a5a80);
+        background: linear-gradient(135deg, var(--primary-color), #6c2f74ff);
         color: white;
         padding: 2rem;
         text-align: center;
@@ -39,7 +39,7 @@
         box-shadow: 0 0 0 0.25rem rgba(74, 111, 165, 0.25);
     }
     .btn-login {
-        background: linear-gradient(135deg, var(--primary-color), #3a5a80);
+        background: linear-gradient(135deg, var(--primary-color), #6c2f74ff);
         border: none;
         padding: 0.75rem;
         font-weight: 600;
@@ -87,6 +87,8 @@
                     {% for error in form.non_field_errors %}
                         {{ error }}
                     {% endfor %}
+                    <br>
+                    <span>If you see a CSRF error, <b>Reload the Page and put details again</b>.</span>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endif %}
@@ -129,9 +131,9 @@
                             name="{{ form.password.name }}" 
                             placeholder="••••••••" 
                             required>
-                        <button class="btn btn-outline-secondary toggle-password" type="button">
+                        <span class="input-group-text" style="cursor:pointer;" onclick="togglePasswordVisibility('{{ form.password.id_for_label }}', this)">
                             <i class="fas fa-eye"></i>
-                        </button>
+                        </span>
                         {% if form.password.errors %}
                             <div class="invalid-feedback">
                                 {{ form.password.errors.0 }}
@@ -178,28 +180,28 @@
 
 {% block extra_js %}
 <script>
-    // Initialize tooltips
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
-    
-    // Toggle password visibility
-    document.querySelectorAll('.toggle-password').forEach(button => {
-        button.addEventListener('click', function() {
-            const input = this.parentElement.querySelector('input');
-            const icon = this.querySelector('i');
-            
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
-        });
-    });
+});
+
+// Password toggle for inline icon
+function togglePasswordVisibility(inputId, iconSpan) {
+    const input = document.getElementById(inputId);
+    const icon = iconSpan.querySelector('i');
+    if (!input || !icon) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
 </script>
 {% endblock %}
