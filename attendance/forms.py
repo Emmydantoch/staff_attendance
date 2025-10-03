@@ -51,7 +51,7 @@ class StaffRegistrationForm(UserCreationForm):
             attrs={
                 "class": "form-control",
                 "placeholder": _("e.g. +1234567890"),
-                "pattern": "^\+?1?\d{9,15}$",
+                "pattern": r"^\+?1?\d{9,15}$",
             }
         ),
     )
