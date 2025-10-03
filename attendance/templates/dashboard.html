@@ -1,0 +1,786 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - StaffTrack {% endblock %}
+
+{% block extra_css %}
+<style>
+    .welcome-card {
+        background: linear-gradient(135deg, #4a6fa5 60%, #3a5a80 100%);
+        color: white;
+        border-radius: 1rem;
+        overflow: hidden;
+        position: relative;
+        z-index: 1;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+    }
+    .welcome-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        z-index: -1;
+    }
+    .welcome-content {
+        position: relative;
+        z-index: 2;
+        padding: 2rem;
+    }
+    .card {
+        background: rgba(255,255,255,0.92);
+        border-radius: 1rem;
+        box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.10);
+        border: none;
+    }
+    .card-header, .card-footer {
+        background: transparent !important;
+    }
+    .stats-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        height: 100%;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+    .stats-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .stats-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+    .stats-label {
+        font-size: 0.9rem;
+        color: var(--gray-600);
+        margin: 0;
+    }
+    .quick-actions .btn {
+        border-radius: 0.75rem;
+        padding: 0.75rem 1.25rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .quick-actions .btn i {
+        margin-right: 0.5rem;
+    }
+    .recent-activity {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .activity-item {
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        align-items: flex-start;
+    }
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: rgba(74, 111, 165, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        color: var(--primary-color);
+        flex-shrink: 0;
+    }
+    .activity-content {
+        flex: 1;
+    }
+    .activity-time {
+        font-size: 0.8rem;
+        color: var(--gray-600);
+        margin-top: 0.25rem;
+    }
+    
+    /* Time Off Item Styles */
+    .time-off-item {
+        padding: 1rem;
+        border-bottom: 1px solid var(--gray-200);
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .time-off-item:last-child {
+        border-bottom: none;
+    }
+    
+    .time-off-item:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .time-off-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .time-off-details {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+        padding: 0 0.5rem;
+    }
+    
+    .time-off-item.expanded .time-off-details {
+        max-height: 500px;
+        padding: 1rem 0.5rem;
+        border-top: 1px solid var(--gray-200);
+        margin-top: 0.75rem;
+    }
+    
+    .time-off-item .toggle-icon {
+        transition: transform 0.3s;
+    }
+    
+    .time-off-item.expanded .toggle-icon {
+        transform: rotate(180deg);
+    }
+    
+    /* Activity icon status colors */
+    .activity-icon.late {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+    
+    .activity-icon.on-time {
+        background-color: rgba(25, 135, 84, 0.1);
+        color: #198754;
+    }
+    
+    .activity-icon.absent {
+        background-color: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    <!-- Welcome Card -->
+    <div class="welcome-card mb-4">
+        <div class="welcome-content">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-1">Welcome back, {{ user.first_name|default:user.username }}!</h2>
+                    <p class="mb-0">{{ user_role }}{% if department %} • {{ department }}{% endif %}</p>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <span class="badge bg-white text-primary px-3 py-2 rounded-pill">
+                        <i class="fas fa-user-shield me-1"></i>
+                        {% if is_staff %}
+                            Administrator
+                        {% else %}
+                            {% if Intern %}
+                                Intern
+                            {% else %}
+                                {% if Trainee %}
+                                    Trainee
+                                {% else %}
+                                    {% if ITstudent %}
+                                        ITstudent
+                                    {% else %}
+                                        Team Member
+                                    {% endif %}
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                    </span>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if is_staff %}
+    <!-- Staff Dashboard -->
+    <div class="row g-4 mb-4">
+        <!-- Stats Cards -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <div class="stats-icon" style="background-color: rgba(220, 53, 69, 0.1); color: #dc3545;">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stats-number text-danger">{{ late_count|default:0 }}</div>
+                    <p class="stats-label">Late Sign-Ins Today</p>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded">
+                            <i class="fas fa-arrow-up me-1"></i> {{ late_count|default:0 }}
+                        </span>
+                        <span class="ms-2 small text-muted">today</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <div class="stats-icon" style="background-color: rgba(25, 135, 84, 0.1); color: #198754;">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stats-number text-success">{{ on_time_percent|default:0 }}%</div>
+                    <p class="stats-label">On-time Attendance</p>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-success bg-opacity-10 text-success p-2 rounded">
+                            <i class="fas fa-arrow-up me-1"></i> {{ on_time_percent|default:0 }}%
+                        </span>
+                        <span class="ms-2 small text-muted">today</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <div class="stats-icon" style="background-color: rgba(13, 110, 253, 0.1); color: #0d6efd;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stats-number text-primary">{{ active_employees|default:0 }}</div>
+                    <p class="stats-label">Active Employees</p>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary bg-opacity-10 text-primary p-2 rounded">
+                            <i class="fas fa-arrow-up me-1"></i> {{ active_employees|default:0 }}
+                        </span>
+                        <span class="ms-2 small text-muted">last 30 days</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <div class="stats-icon" style="background-color: rgba(255, 193, 7, 0.1); color: #ffc107;">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <div class="stats-number text-warning">{{ pending_leaves|default:0 }}</div>
+                    <p class="stats-label">Pending Leave Requests</p>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-warning bg-opacity-10 text-warning p-2 rounded">
+                            <i class="fas fa-arrow-down me-1"></i> {{ pending_leaves|default:0 }}
+                        </span>
+                        <span class="ms-2 small text-muted">pending</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Chart Section -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Weekly Attendance Overview</h5>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="timeRangeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                This Week
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="timeRangeDropdown">
+                                <li><a class="dropdown-item active" href="#">This Week</a></li>
+                                <li><a class="dropdown-item" href="#">Last Week</a></li>
+                                <li><a class="dropdown-item" href="#">This Month</a></li>
+                                <li><a class="dropdown-item" href="#">Last Month</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Hidden element to hold chart data for real-time updates -->
+                    <div id="chart-data" data-labels='{{ chart_labels|default:"[]"|safe }}' data-data='{{ chart_data|default:"[]"|safe }}' style="display:none;"></div>
+                    <div style="position: relative; height: 300px;">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Recent Activity -->
+        <div class="col-lg-4 d-flex align-items-stretch">
+            <div class="card w-100 h-100">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">Recent Activity</h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="recent-activity p-3">
+                        {% for att in recent_attendance %}
+                        <li class="activity-item">
+                            <div class="activity-icon {% if att.sign_in and att.sign_in|time > '09:00:00' %}late{% elif att.sign_in %}on-time{% else %}absent{% endif %}">
+                                {% if att.sign_in and att.sign_in|time > '09:00:00' %}
+                                    <i class="fas fa-user-clock"></i>
+                                {% elif att.sign_in %}
+                                    <i class="fas fa-user-check"></i>
+                                {% else %}
+                                    <i class="fas fa-sign-out-alt"></i>
+                                {% endif %}
+                            </div>
+                            <div class="activity-content">
+                                <div class="d-flex justify-content-between">
+                                    <strong>
+                                        {% if att.sign_in and att.sign_in|time > '09:00:00' %}Late Arrival{% elif att.sign_in %}On Time{% else %}No Check-In{% endif %}
+                                    </strong>
+                                    <span class="text-muted small">{{ att.sign_in|time:"H:i A"|default:"--:--" }}</span>
+                                </div>
+                                <p class="mb-0 small">
+                                    {{ att.user.get_full_name|default:att.user.username }}
+                                    {% if att.sign_in and att.sign_in|time > '09:00:00' %}
+                                        arrived late
+                                    {% elif att.sign_in %}
+                                        checked in
+                                    {% else %}
+                                        no check-in
+                                    {% endif %}
+                                </p>
+                                <div class="activity-time">{{ att.date|date:"M d, Y" }}</div>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="activity-item text-muted">No recent activity.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="card-footer bg-white border-0 text-center">
+                    <a href="#" class="text-decoration-none">View All Activity <i class="fas fa-arrow-right ms-1"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions & Recent Leave Requests in one row -->
+    <div class="row g-4">
+        <!-- Quick Actions / Team Member Card -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <span class="badge bg-white text-primary px-3 py-2 rounded-pill">
+                        <i class="fas fa-user-shield me-1"></i>
+                        {% if is_staff %}
+                            Administrator
+                        {% elif user_role == "Intern" %}
+                            Intern
+                        {% elif user_role == "Trainee" %}
+                            Trainee
+                        {% elif user_role == "ITstudent" %}
+                            ITstudent
+                        {% else %}
+                            Team Member
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="col-md-6">
+                    <a href="{% url 'attendance_list' %}" class="btn btn-outline-info w-100 py-3 mb-2">
+                        <i class="fas fa-list-alt me-2"></i>View Attendance
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <a href="#" class="btn btn-outline-secondary w-100 py-3 mb-2">
+                        <i class="fas fa-file-export me-2"></i>Export Report
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- Recent Leave Requests Card -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Leave Requests</h5>
+                    <a href="{% url 'all_time_off' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Leave Type</th>
+                                    <th>Dates</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in recent_leaves %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="https://ui-avatars.com/api/?name={{ leave.user.get_full_name|default:leave.user.username|urlencode }}&background=4a6fa5&color=fff" class="rounded-circle me-2" width="32" height="32" alt="{{ leave.user.get_full_name|default:leave.user.username }}">
+                                            <div>{{ leave.user.get_full_name|default:leave.user.username }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if leave.type == 'Remote Work' %}
+                                            <span class="badge bg-info bg-opacity-10 text-info">Remote Work</span>
+                                        {% else %}
+                                            {{ leave.reason|truncatewords:3 }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"M d" }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if leave.status == 'Pending' %}bg-warning bg-opacity-10 text-warning{% endif %}
+                                            {% if leave.status == 'Approved' %}bg-success bg-opacity-10 text-success{% endif %}
+                                            {% if leave.status == 'Rejected' %}bg-danger bg-opacity-10 text-danger{% endif %}">
+                                            {{ leave.status }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        {% if is_staff and leave.status == 'Pending' %}
+                                            <form method="post" action="{% url 'approve_leave_request' leave.id %}" style="display:inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                                            </form>
+                                            <form method="post" action="{% url 'reject_leave_request' leave.id %}" style="display:inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                                            </form>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-link p-0" data-bs-toggle="tooltip" title="View Details">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center text-muted">No recent leave requests.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- Employee Dashboard -->
+    <div class="row g-4">
+        <!-- Welcome Card -->
+        <div class="col-12">
+            <div class="card bg-light border-0">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3 class="h4 mb-2">Welcome to Your Dashboard</h3>
+                            <p class="text-muted mb-0">Check your attendance, request time off, and stay up to date with your schedule.</p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <div class="d-flex flex-column">
+                                <span class="badge bg-primary bg-opacity-10 text-primary p-2 mb-2">
+                                    <i class="far fa-calendar-check me-1"></i> 
+                                    {% now "F Y" %}
+                                </span>
+                                <div class="d-flex justify-content-md-end gap-2">
+                                    <a href="{% url 'sign_in_out' %}" class="btn btn-primary">
+                                        <i class="fas fa-sign-in-alt me-1"></i> Sign In/Out
+                                    </a>
+                                    <a href="{% url 'leave_request' %}" class="btn btn-outline-primary">
+                                        <i class="far fa-calendar-plus me-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="avatar avatar-lg bg-primary bg-opacity-10 text-primary rounded-circle mb-3">
+                        <i class="fas fa-calendar-check fa-2x"></i>
+                    </div>
+                    <h3 class="mb-1">{{ days_worked|default:0 }}</h3>
+                    <p class="text-muted mb-0">Days Worked This Month</p>
+                    <div class="progress mt-3" style="height: 6px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ days_worked_percent|default:0 }}%;" aria-valuenow="{{ days_worked_percent|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p class="small text-muted mt-2 mb-0">of monthly target</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="avatar avatar-lg bg-warning bg-opacity-10 text-warning rounded-circle mb-3">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                    <h3 class="mb-1">{{ late_arrivals|default:0 }}</h3>
+                    <p class="text-muted mb-0">Late Arrivals</p>
+                    <div class="mt-3">
+                        <span class="badge bg-warning bg-opacity-10 text-warning">
+                        <i class="fas fa-arrow-down me-1"></i> {{ late_arrivals|default:0 }} this month
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="avatar avatar-lg bg-success bg-opacity-10 text-success rounded-circle mb-3">
+                        <i class="fas fa-umbrella-beach fa-2x"></i>
+                    </div>
+                    <h3 class="mb-1">{{ vacation_days_left|default:0 }}</h3>
+                    <p class="text-muted mb-0">Remaining Vacation Days</p>
+                    <a href="{% url 'leave_request' %}" class="btn btn-sm btn-outline-success mt-3">
+                        <i class="far fa-calendar-plus me-1"></i> Request Time Off
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">Your Recent Activity</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Total Hours</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for att in recent_user_attendance %}
+                                <tr>
+                                    <td>{{ att.date|date:"M d, Y" }}</td>
+                                    <td>{{ att.sign_in|time:"h:i A"|default:"--:--" }}</td>
+                                    <td>{{ att.sign_out|time:"h:i A"|default:"--:--" }}</td>
+                                    <td>{{ att.duration_str|default:"--:--" }}</td>
+                                    <td>
+                                        {% if att.sign_in and att.sign_out %}
+                                            {% if att.sign_in|time > '09:00:00' %}
+                                                <span class="badge bg-warning bg-opacity-10 text-warning">Late</span>
+                                            {% else %}
+                                                <span class="badge bg-success bg-opacity-10 text-success">Completed</span>
+                                            {% endif %}
+                                        {% elif att.sign_in and not att.sign_out %}
+                                            <span class="badge bg-info bg-opacity-10 text-info">Working</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary">Day Off</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center text-muted">No recent attendance records.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0 text-center">
+                    <a href="#" class="text-decoration-none">View Full Attendance History <i class="fas fa-arrow-right ms-1"></i></a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upcoming Time Off -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Upcoming Time Off</h5>
+                    <a href="{% url 'leave_request' %}" class="btn btn-sm btn-outline-primary">Request</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for leave in upcoming_time_off %}
+                        <div class="time-off-item" role="button" aria-expanded="false" aria-controls="leaveDetails{{ leave.id }}">
+                            <div class="time-off-header">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar avatar-md 
+                                        {% if leave.type == 'Remote Work' %}bg-info bg-opacity-10 text-info{% elif leave.status == 'Approved' %}bg-success bg-opacity-10 text-success{% elif leave.status == 'Pending' %}bg-warning bg-opacity-10 text-warning{% else %}bg-secondary bg-opacity-10 text-secondary{% endif %} rounded-circle me-3">
+                                        {% if leave.type == 'Remote Work' %}
+                                            <i class="fas fa-home"></i>
+                                        {% else %}
+                                            <i class="fas fa-umbrella-beach"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">
+                                            {% if leave.type == 'Remote Work' %}Remote Work{% else %}{{ leave.reason|truncatewords:3 }}{% endif %}
+                                        </h6>
+                                        <small class="text-muted">{{ leave.start_date|date:"M d, Y" }} - {{ leave.end_date|date:"M d, Y" }}</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge me-2
+                                        {% if leave.type == 'Remote Work' %}bg-info bg-opacity-10 text-info{% elif leave.status == 'Approved' %}bg-success bg-opacity-10 text-success{% elif leave.status == 'Pending' %}bg-warning bg-opacity-10 text-warning{% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+                                        {% if leave.type == 'Remote Work' %}Remote{% else %}{{ leave.status }}{% endif %}
+                                    </span>
+                                    <i class="fas fa-chevron-down toggle-icon text-muted"></i>
+                                </div>
+                            </div>
+                            <div class="time-off-details" id="leaveDetails{{ leave.id }}">
+                                <div class="mt-2 pt-2">
+                                    <p class="mb-1"><strong>Type:</strong> {{ leave.get_type_display|default:leave.type }}</p>
+                                    <p class="mb-1"><strong>Duration:</strong> {{ leave.days }} day{{ leave.days|pluralize }}</p>
+                                    <p class="mb-0"><strong>Full Reason:</strong> {{ leave.reason }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center text-muted p-4">
+                            No upcoming time off scheduled.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0 text-center">
+                    <a href="{% url 'all_time_off' %}" class="text-decoration-none">View All Time Off <i class="fas fa-arrow-right ms-1"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Time off expand/collapse functionality
+    document.querySelectorAll('.time-off-item').forEach(item => {
+        item.addEventListener('click', function() {
+            this.classList.toggle('expanded');
+            
+            // Toggle aria-expanded for accessibility
+            const isExpanded = this.classList.contains('expanded');
+            this.setAttribute('aria-expanded', isExpanded);
+            
+            // If you want to close other open items when opening a new one
+            if (isExpanded) {
+                document.querySelectorAll('.time-off-item').forEach(otherItem => {
+                    if (otherItem !== this && otherItem.classList.contains('expanded')) {
+                        otherItem.classList.remove('expanded');
+                        otherItem.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- Bootstrap 5 JS (required for collapse) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoA6DQD1P1L1QnYh6tY1QZ6V9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Attendance Chart (real-time)
+    const ctx = document.getElementById('attendanceChart');
+    const chartDataElem = document.getElementById('chart-data');
+    if (ctx && chartDataElem) {
+        const chartData = JSON.parse(chartDataElem.dataset.data || '[]');
+        const chartLabels = JSON.parse(chartDataElem.dataset.labels || '[]');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartLabels.length ? chartLabels : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Late Arrivals',
+                    data: chartData.length ? chartData : [3, 5, 2, 4, 2, 0, 1],
+                    backgroundColor: 'rgba(74, 111, 165, 0.8)',
+                    borderColor: 'rgba(74, 111, 165, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#2c3e50',
+                        titleFont: { size: 14, weight: '600' },
+                        bodyFont: { size: 13 },
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.parsed.y} ${context.parsed.y === 1 ? 'person' : 'people'} late`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            precision: 0
+                        },
+                        grid: {
+                            drawBorder: false,
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Fix for Bootstrap collapse not working on dynamically rendered elements
+    // (re-initialize collapse for all .collapse elements)
+    document.querySelectorAll('.collapse').forEach(function (el) {
+        new bootstrap.Collapse(el, { toggle: false });
+    });
+});
+</script>
+{% endblock %}

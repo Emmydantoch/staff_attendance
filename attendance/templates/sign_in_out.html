@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header text-center p-4" style="background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%); border-top-left-radius: 1rem; border-top-right-radius: 1rem;">
+                    <h2 class="mb-0 fw-bold" style="color: #ffe066; text-shadow: 0 2px 8px rgba(24,90,157,0.18);">Sign In / Sign Out</h2>
+                </div>
+                <div class="card-body p-4">
+                    {% if status_message %}
+                        <div style="
+                            background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%);
+                            color: #fff;
+                            border-radius: 1rem;
+                            box-shadow: 0 4px 16px rgba(24,90,157,0.15);
+                            padding: 1.25rem 1.5rem;
+                            margin-bottom: 1.5rem;
+                            display: flex;
+                            align-items: center;
+                            font-size: 1.15rem;
+                            font-weight: 500;
+                            letter-spacing: 0.01em;
+                            position: relative;
+                            overflow: hidden;">
+                            <span style="font-size:1.7rem; margin-right: 0.75rem;">&#x2714;&#xFE0F;</span>
+                            <span>{{ status_message }}</span>
+                            {% if sign_time %}
+                                <span style="margin-left: 1.5rem; font-size: 0.95rem; opacity: 0.85;">Time: {{ sign_time|date:'H:i:s' }}</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-4 text-center">
+                        <p class="fs-5 mb-1">
+                            <strong>Current Status:</strong>
+                            {% if attendance.sign_in and not attendance.sign_out %}
+                                <span class="text-success">You are signed in, We wish you a very productive day ahead !!!, kinplus loves you.</span> <br>
+                                <span class="small">Sign in time: {{ attendance.sign_in|date:'H:i:s' }}</span>
+                            {% elif attendance.sign_out %}
+                                <span class="text-danger">You are signed out, Have a nice rest ahead Kinplus Cares!!!</span> <br>
+                                <span class="small">Sign out time: {{ attendance.sign_out|date:'H:i:s' }}</span>
+                            {% else %}
+                                <span class="text-muted">Not signed in today</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    {% if show_form %}
+                        <form method="post" class="text-center">
+                            {% csrf_token %}
+                            {% if show_sign_in %}
+                                <input type="hidden" name="action" value="sign_in">
+                                <button type="submit" class="btn btn-lg btn-success px-5 py-2 shadow-sm fw-bold">Sign In</button>
+                            {% elif show_sign_out %}
+                                <input type="hidden" name="action" value="sign_out">
+                                <button type="submit" class="btn btn-lg btn-danger px-5 py-2 shadow-sm fw-bold">Sign Out</button>
+                            {% endif %}
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info text-center mt-4">You have completed all sign in/out actions for today.<br>Thanks for working with us as a Team. You have done so much!</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

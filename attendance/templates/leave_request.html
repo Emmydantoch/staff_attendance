@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Request Time Off or Remote Work</h2>
+<form method="post" class="p-4 rounded shadow-sm bg-white" style="max-width: 500px; margin: auto;">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="id_type" class="form-label">Request Type</label>
+        {{ form.type }}
+    </div>
+    <div class="mb-3">
+        <label for="id_start_date" class="form-label">Start Date</label>
+        {{ form.start_date }}
+    </div>
+    <div class="mb-3">
+        <label for="id_end_date" class="form-label">End Date</label>
+        {{ form.end_date }}
+    </div>
+    <div class="mb-3">
+        <label for="id_reason" class="form-label">Reason</label>
+        {{ form.reason }}
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Submit Request</button>
+</form>
+{% endblock %}
