@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: staff-attendance
+    env: python
+    buildCommand: 
+      - pip install -r requirements.txt
+      - python manage.py collectstatic --noinput
+    startCommand: gunicorn staff_attendance.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: staff_attendance.settings
+      - key: PYTHONUNBUFFERED
+        value: 1
