@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-wm@00t9&e#5u&_@&_-2wxc-q20#uv@bwe%i*w0!sp!3@a484gp"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
     "staff-attendance-etqs.onrender.com",
@@ -48,8 +48,9 @@ INSTALLED_APPS = [
 ]
 
 # Custom user model
-# AUTH_USER_MODEL = "accounts.CustomUser"
-AUTH_USER_MODEL = "auth.User"
+# Use the custom user model
+AUTH_USER_MODEL = "accounts.CustomUser"
+# AUTH_USER_MODEL = "auth.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -85,27 +86,12 @@ WSGI_APPLICATION = "staff_attendance.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Database configuration
-DATABASE_URL = os.environ.get('DATABASE_URL')
-
-if DATABASE_URL:
-    # Production database (Render)
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL)
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    # Local development database
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": "staff-attendance",
-            "USER": "postgres",
-            "PASSWORD": "CHInedu1909",
-            "HOST": "localhost",
-            "PORT": "5432",
-        }
-    }
-
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -142,13 +128,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 
-
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # for production
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # for development
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # for production
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]  # for development
 
 # WhiteNoise configuration for serving static files
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
