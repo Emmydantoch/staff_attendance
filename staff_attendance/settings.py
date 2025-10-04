@@ -95,15 +95,12 @@ if DATABASE_URL:
 else:
     # Local development database
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": "staff-attendance",
-            "USER": "postgres",
-            "PASSWORD": "CHInedu1909",
-            "HOST": "localhost",
-            "PORT": "5432",
-        }
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
+}
+
 
 
 # Password validation
