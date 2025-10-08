@@ -85,9 +85,14 @@ WSGI_APPLICATION = "staff_attendance.wsgi.application"
 
 import dj_database_url
 
+# DATABASES = {
+#     "default": dj_database_url.parse("postgresql://myapp_db_uckm_user:X3zRxCVYN98FVeVisknYOr1oVCix3qIB@dpg-d3j6thm3jp1c73f165j0-a/myapp_db_uckm", conn_max_age=600, ssl_require=True)
+# }
+
+
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = os.environ.get("postgresql://myapp_db_uckm_user:X3zRxCVYN98FVeVisknYOr1oVCix3qIB@dpg-d3j6thm3jp1c73f165j0-a/myapp_db_uckmL")
 if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(
@@ -153,14 +158,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
-from django.contrib.auth import get_user_model
 
-User = get_user_model()
 
-if os.environ.get("CREATE_SUPERUSER", "False") == "True":
-    username = os.environ.get("ADMIN_USERNAME", "admin")
-    email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
-    password = os.environ.get("ADMIN_PASSWORD", "AdminPass123")
-    if not User.objects.filter(username=username).exists():
-        User.objects.create_superuser(username=username, email=email, password=password)
-        print("✅ Superuser created automatically.")
+
