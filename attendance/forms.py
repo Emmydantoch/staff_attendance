@@ -105,6 +105,7 @@ class StaffRegistrationForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.phone = self.cleaned_data["phone"]
+        user.is_active = True  # Ensure user is always active on registration
         if commit:
             user.save()
             # No need to create a separate Staff object as we're using CustomUser (removed)
