@@ -152,3 +152,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Authentication settings
 LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+if os.environ.get("CREATE_SUPERUSER", "False") == "True":
+    username = os.environ.get("ADMIN_USERNAME", "admin")
+    email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
+    password = os.environ.get("ADMIN_PASSWORD", "AdminPass123")
+    if not User.objects.filter(username=username).exists():
+        User.objects.create_superuser(username=username, email=email, password=password)
+        print("✅ Superuser created automatically.")

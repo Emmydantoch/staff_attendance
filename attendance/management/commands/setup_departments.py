@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand
 from attendance.models import Department
 
+# This Python class creates initial departments for a system by populating a list of department names
+# and descriptions in a Django model.
 class Command(BaseCommand):
     help = 'Create initial departments for the system'
 
@@ -16,6 +18,10 @@ class Command(BaseCommand):
             {"name": "Product Management Team", "description": "Oversees product development and lifecycle management"},
             {"name": "Design UI/UX Team", "description": "Responsible for product design and user experience"},
             {"name": "Data Management Team", "description": "Oversees data governance and analytics"},
+            {"name": "Trainee ", "description": "They are trainees who have payed for a particular course"},
+            {"name": "IT_student ", "description": " They are students taking IT related courses"},
+            {"name": "Intern", "description": " They are interns working in various departments under agreements"},
+            {"name": "Ideas/3mtt", "description": "they students taking sponsoured courses"},
         ]
 
         created_count = 0
