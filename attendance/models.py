@@ -146,6 +146,7 @@ class LeaveRequest(models.Model):
 
     REQUEST_TYPE_CHOICES = [
         ("Leave", _("Leave")),
+        ("Suggestion", _("Suggestion")),
         ("Remote Work", _("Remote Work")),
     ]
     STATUS_CHOICES = [

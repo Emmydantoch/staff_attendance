@@ -13,9 +13,11 @@ class RestrictIPMiddleware:
         # Only restrict for sign-in/out views
         if request.path.startswith("/sign-in-out/"):
             allowed_ips = [
-                "192.168.1.100",  # Replace with your allowed system's IPs
-                "192.168.1.101",
-                "192.168.1.102",
+                '127.0.0.1'
+                # 'fe80::c249:f89b:70c2:df6%10'
+                # "172.16.20.10",  # Replace with your allowed system's IPs
+                # "192.168.1.101",
+                # "192.168.1.102",
             ]
             ip = request.META.get("REMOTE_ADDR")
             if ip not in allowed_ips:
