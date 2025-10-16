@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_POST
-
+from django.http import JsonResponse
 
 # List all time off requests for the current user (or all for admin)
 @login_required
@@ -423,6 +423,31 @@ def dashboard(request):
         logger.error(f"Error in dashboard view: {str(e)}", exc_info=True)
         messages.error(request, "An error occurred while loading the dashboard.")
         return redirect("home")
+
+
+@login_required
+def attendance_chart_data(request):
+    """Return JSON with labels and data for the last 7 days late arrivals (admin only)."""
+    if not request.user.is_staff:
+        return JsonResponse({"error": "forbidden"}, status=403)
+
+    try:
+        today = timezone.now().date()
+        end_date = today
+        start_date = end_date - timedelta(days=6)
+        date_range = [start_date + timedelta(days=x) for x in range(7)]
+        labels = [d.strftime("%Y-%m-%d") for d in date_range]
+        late_threshold = (
+            timezone.now().replace(hour=9, minute=0, second=0, microsecond=0).time()
+        )
+        data = [
+            Attendance.objects.filter(date=d, sign_in__time__gt=late_threshold).count()
+            for d in date_range
+        ]
+        return JsonResponse({"labels": labels, "data": data})
+    except Exception as e:
+        logger.error(f"Error generating chart data: {e}", exc_info=True)
+        return JsonResponse({"error": "internal"}, status=500)
 
 
 # Create your views here.

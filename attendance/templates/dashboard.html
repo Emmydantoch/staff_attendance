@@ -717,64 +717,94 @@ document.addEventListener('DOMContentLoaded', function() {
     // Attendance Chart (real-time)
     const ctx = document.getElementById('attendanceChart');
     const chartDataElem = document.getElementById('chart-data');
-    if (ctx && chartDataElem) {
-        const chartData = JSON.parse(chartDataElem.dataset.data || '[]');
-        const chartLabels = JSON.parse(chartDataElem.dataset.labels || '[]');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: chartLabels.length ? chartLabels : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                datasets: [{
-                    label: 'Late Arrivals',
-                    data: chartData.length ? chartData : [3, 5, 2, 4, 2, 0, 1],
-                    backgroundColor: 'rgba(74, 111, 165, 0.8)',
-                    borderColor: 'rgba(74, 111, 165, 1)',
-                    borderWidth: 1,
-                    borderRadius: 4,
-                    barPercentage: 0.7
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: '#2c3e50',
-                        titleFont: { size: 14, weight: '600' },
-                        bodyFont: { size: 13 },
-                        padding: 12,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.parsed.y} ${context.parsed.y === 1 ? 'person' : 'people'} late`;
+    let attendanceChart = null;
+
+    function createOrUpdateChart(labels, data) {
+        if (!ctx) return;
+        if (!attendanceChart) {
+            attendanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Late Arrivals',
+                        data: data,
+                        backgroundColor: 'rgba(74, 111, 165, 0.8)',
+                        borderColor: 'rgba(74, 111, 165, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#2c3e50',
+                            titleFont: { size: 14, weight: '600' },
+                            bodyFont: { size: 13 },
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.parsed.y} ${context.parsed.y === 1 ? 'person' : 'people'} late`;
+                                }
                             }
                         }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1,
-                            precision: 0
-                        },
-                        grid: {
-                            drawBorder: false,
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
                     },
-                    x: {
-                        grid: {
-                            display: false
-                        }
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, precision: 0 },
+                            grid: { drawBorder: false, color: 'rgba(0, 0, 0, 0.05)' }
+                        },
+                        x: { grid: { display: false } }
                     }
                 }
-            }
-        });
+            });
+        } else {
+            attendanceChart.data.labels = labels;
+            attendanceChart.data.datasets[0].data = data;
+            attendanceChart.update();
+        }
     }
+
+    // Initialize chart with server-provided data if available
+    if (chartDataElem) {
+        try {
+            const initialLabels = JSON.parse(chartDataElem.dataset.labels || '[]');
+            const initialData = JSON.parse(chartDataElem.dataset.data || '[]');
+            if (initialLabels.length && initialData.length) {
+                createOrUpdateChart(initialLabels, initialData);
+            } else {
+                createOrUpdateChart(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], [0,0,0,0,0,0,0]);
+            }
+        } catch (err) {
+            console.error('Error parsing initial chart data', err);
+            createOrUpdateChart(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], [0,0,0,0,0,0,0]);
+        }
+    }
+
+    // Poll the server every 10 seconds for fresh chart data
+    async function pollChartData() {
+        try {
+            const resp = await fetch('{% url "attendance_chart_data" %}');
+            if (!resp.ok) throw new Error('Network response was not ok');
+            const json = await resp.json();
+            if (json.labels && json.data) {
+                createOrUpdateChart(json.labels, json.data);
+            }
+        } catch (err) {
+            console.warn('Failed to fetch chart data:', err);
+        }
+    }
+
+    // Start polling only for staff users (chart limited to admin in views)
+    {% if is_staff %}
+        setInterval(pollChartData, 10000);
+    {% endif %}
 
     // Fix for Bootstrap collapse not working on dynamically rendered elements
     // (re-initialize collapse for all .collapse elements)

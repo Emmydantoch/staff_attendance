@@ -12,6 +12,11 @@ urlpatterns = [
     ),
     path("leave-request/", views.leave_request, name="leave_request"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    path(
+        "dashboard/chart-data/",
+        views.attendance_chart_data,
+        name="attendance_chart_data",
+    ),
     path("all-time-off/", views.all_time_off, name="all_time_off"),
     path(
         "leave-request/<int:leave_id>/approve/",
