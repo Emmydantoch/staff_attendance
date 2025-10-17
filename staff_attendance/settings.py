@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,11 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-wm@00t9&e#5u&_@&_-2wxc-q20#uv@bwe%i*w0!sp!3@a484gp"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True") == "True"
+
 ALLOWED_HOSTS = [
-    "staff-attendance-etqs.onrender.com",
     "localhost",
     "127.0.0.1",
+    ".pythonanywhere.com",  # Allow all PythonAnywhere subdomains
 ]
 
 
@@ -83,29 +83,15 @@ TEMPLATES = [
 WSGI_APPLICATION = "staff_attendance.wsgi.application"
 
 
-import dj_database_url
-
-# DATABASES = {
-#     "default": dj_database_url.parse("postgresql://myapp_db_uckm_user:X3zRxCVYN98FVeVisknYOr1oVCix3qIB@dpg-d3j6thm3jp1c73f165j0-a/myapp_db_uckm", conn_max_age=600, ssl_require=True)
-# }
-
-
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-DATABASE_URL = os.environ.get("postgresql://myapp_db_uckm_user:X3zRxCVYN98FVeVisknYOr1oVCix3qIB@dpg-d3j6thm3jp1c73f165j0-a/myapp_db_uckmL")
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL, conn_max_age=600, ssl_require=True
-        )
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
