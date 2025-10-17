@@ -66,3 +66,50 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+        // If server set a session flag to prompt for a note, show the modal
+        const promptId = {% if prompt_attendance_note %}{{ prompt_attendance_note }}{% else %}null{% endif %}; 
+        if (promptId) {
+                // show modal to leave a note
+                const modalHtml = `
+                <div class="modal fade" id="attendanceNoteModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Leave a note for your sign out</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <textarea id="attendanceNoteText" class="form-control" rows="4" placeholder="Would you like to leave a message..."></textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Skip</button>
+                                <button type="button" class="btn btn-primary" id="attendanceNoteSave">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                const attendanceNoteModal = new bootstrap.Modal(document.getElementById('attendanceNoteModal'));
+                attendanceNoteModal.show();
+
+                document.getElementById('attendanceNoteSave').addEventListener('click', function(){
+                        const note = document.getElementById('attendanceNoteText').value;
+                        fetch('{% url "save_attendance_note" %}', {
+                                method: 'POST',
+                                headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': '{{ csrf_token }}'
+                                },
+                                body: JSON.stringify({attendance_id: promptId, note: note})
+                        }).then(r => r.json()).then(data => {
+                                attendanceNoteModal.hide();
+                        }).catch(err => { attendanceNoteModal.hide(); });
+                });
+        }
+});
+</script>
+{% endblock %}

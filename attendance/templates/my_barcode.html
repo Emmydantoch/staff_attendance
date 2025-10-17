@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header text-center p-4" style="background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%); border-top-left-radius: 1rem; border-top-right-radius: 1rem;">
+                    <h2 class="mb-0 fw-bold" style="color: #ffe066; text-shadow: 0 2px 8px rgba(24,90,157,0.18);">My QR Code</h2>
+                </div>
+                <div class="card-body p-5 text-center">
+                    <div class="mb-4">
+                        <h4 class="text-muted">{{ request.user.get_full_name|default:request.user.username }}</h4>
+                        <p class="text-secondary">{{ staff.position|default:"Staff Member" }}</p>
+                    </div>
+                    
+                    <!-- QR Code Display -->
+                    <div class="qr-code-container mb-4 p-4" style="background: #f8f9fa; border-radius: 1rem; display: inline-block;">
+                        <div id="qrcode"></div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Use this QR code to sign in/out at the barcode scanner station
+                    </div>
+                    
+                    <div class="mt-4">
+                        <p class="small text-muted">Barcode ID: <strong>{{ staff.barcode }}</strong></p>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button class="btn btn-primary" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print QR Code
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .qr-code-container, .qr-code-container * {
+            visibility: visible;
+        }
+        .qr-code-container {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Generate QR code
+    new QRCode(document.getElementById("qrcode"), {
+        text: "{{ staff.barcode }}",
+        width: 256,
+        height: 256,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+});
+</script>
+{% endblock %}

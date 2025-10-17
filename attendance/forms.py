@@ -127,3 +127,9 @@ class LeaveRequestForm(forms.ModelForm):
             "start_date": forms.DateInput(attrs={"type": "date"}),
             "end_date": forms.DateInput(attrs={"type": "date"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make start_date and end_date optional so 'Suggestion' requests don't require them
+        self.fields["start_date"].required = False
+        self.fields["end_date"].required = False

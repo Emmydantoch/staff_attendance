@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header text-center p-4" style="background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%); border-top-left-radius: 1rem; border-top-right-radius: 1rem;">
+                    <h2 class="mb-0 fw-bold" style="color: #ffe066; text-shadow: 0 2px 8px rgba(24,90,157,0.18);">
+                        <i class="bi bi-qr-code-scan"></i> Barcode Scanner
+                    </h2>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Status Message -->
+                    <div id="statusMessage" class="alert d-none" role="alert"></div>
+                    
+                    <!-- Scanner Options -->
+                    <div class="text-center mb-4">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-primary" id="cameraBtn" onclick="startCamera()">
+                                <i class="bi bi-camera-video"></i> Use Camera
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" id="manualBtn" onclick="showManualInput()">
+                                <i class="bi bi-keyboard"></i> Manual Entry
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Camera Scanner -->
+                    <div id="cameraScanner" class="d-none">
+                        <div class="text-center mb-3">
+                            <p class="text-muted">Position the QR code within the frame</p>
+                        </div>
+                        <div id="reader" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
+                        <div class="text-center mt-3">
+                            <button class="btn btn-danger" onclick="stopCamera()">
+                                <i class="bi bi-stop-circle"></i> Stop Camera
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Manual Input -->
+                    <div id="manualInput" class="d-none">
+                        <div class="row justify-content-center">
+                            <div class="col-md-8">
+                                <form id="manualForm" onsubmit="submitBarcode(event)">
+                                    <div class="mb-3">
+                                        <label for="barcodeInput" class="form-label">Enter Barcode</label>
+                                        <input type="text" class="form-control form-control-lg" id="barcodeInput" 
+                                               placeholder="STAFF-XXXXXXXXXXXX" required autofocus>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="bi bi-check-circle"></i> Submit
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" onclick="hideManualInput()">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Instructions -->
+                    <div id="instructions" class="mt-4">
+                        <div class="alert alert-light border">
+                            <h5 class="alert-heading"><i class="bi bi-info-circle"></i> Instructions</h5>
+                            <ul class="mb-0">
+                                <li>Click "Use Camera" to scan QR codes with your device camera</li>
+                                <li>Click "Manual Entry" to type in the barcode manually</li>
+                                <li>The system will automatically sign you in or out based on your current status</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-5">
+                <div id="successIcon" class="mb-4">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                </div>
+                <h3 id="successUser" class="mb-3"></h3>
+                <p id="successMessage" class="lead"></p>
+                <p id="successTime" class="text-muted"></p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+let html5QrCode = null;
+
+function startCamera() {
+    document.getElementById('cameraScanner').classList.remove('d-none');
+    document.getElementById('manualInput').classList.add('d-none');
+    document.getElementById('instructions').classList.add('d-none');
+    document.getElementById('cameraBtn').classList.add('active');
+    document.getElementById('manualBtn').classList.remove('active');
+    
+    html5QrCode = new Html5Qrcode("reader");
+    
+    html5QrCode.start(
+        { facingMode: "environment" },
+        {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+        },
+        (decodedText, decodedResult) => {
+            // QR code successfully scanned
+            processBarcode(decodedText);
+            stopCamera();
+        },
+        (errorMessage) => {
+            // Scanning error (can be ignored for continuous scanning)
+        }
+    ).catch((err) => {
+        showStatus('error', 'Unable to start camera. Please check permissions or use manual entry.');
+        console.error(err);
+    });
+}
+
+function stopCamera() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            html5QrCode = null;
+            document.getElementById('cameraScanner').classList.add('d-none');
+            document.getElementById('instructions').classList.remove('d-none');
+        }).catch((err) => {
+            console.error(err);
+        });
+    }
+}
+
+function showManualInput() {
+    stopCamera();
+    document.getElementById('manualInput').classList.remove('d-none');
+    document.getElementById('cameraScanner').classList.add('d-none');
+    document.getElementById('instructions').classList.add('d-none');
+    document.getElementById('manualBtn').classList.add('active');
+    document.getElementById('cameraBtn').classList.remove('active');
+    document.getElementById('barcodeInput').focus();
+}
+
+function hideManualInput() {
+    document.getElementById('manualInput').classList.add('d-none');
+    document.getElementById('instructions').classList.remove('d-none');
+    document.getElementById('manualBtn').classList.remove('active');
+    document.getElementById('barcodeInput').value = '';
+}
+
+function submitBarcode(event) {
+    event.preventDefault();
+    const barcode = document.getElementById('barcodeInput').value.trim();
+    if (barcode) {
+        processBarcode(barcode);
+        document.getElementById('barcodeInput').value = '';
+    }
+}
+
+function processBarcode(barcode) {
+    showStatus('info', 'Processing...');
+    
+    fetch('{% url "barcode_authenticate" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ barcode: barcode })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccessModal(data);
+            hideManualInput();
+        } else {
+            showStatus('error', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showStatus('error', 'An error occurred. Please try again.');
+    });
+}
+
+function showStatus(type, message) {
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.className = 'alert';
+    
+    if (type === 'success') {
+        statusDiv.classList.add('alert-success');
+    } else if (type === 'error') {
+        statusDiv.classList.add('alert-danger');
+    } else {
+        statusDiv.classList.add('alert-info');
+    }
+    
+    statusDiv.textContent = message;
+    statusDiv.classList.remove('d-none');
+    
+    if (type !== 'error') {
+        setTimeout(() => {
+            statusDiv.classList.add('d-none');
+        }, 3000);
+    }
+}
+
+function showSuccessModal(data) {
+    document.getElementById('successUser').textContent = data.user;
+    document.getElementById('successMessage').textContent = data.message;
+    document.getElementById('successTime').textContent = 'Time: ' + data.time;
+    
+    const icon = document.getElementById('successIcon').querySelector('i');
+    if (data.action === 'sign_in') {
+        icon.className = 'bi bi-check-circle-fill text-success';
+    } else {
+        icon.className = 'bi bi-box-arrow-right text-primary';
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('successModal'));
+    modal.show();
+}
+
+// Auto-focus on barcode input when using keyboard scanner
+document.addEventListener('keypress', function(e) {
+    const manualInput = document.getElementById('manualInput');
+    const barcodeInput = document.getElementById('barcodeInput');
+    
+    if (!manualInput.classList.contains('d-none') && document.activeElement !== barcodeInput) {
+        barcodeInput.focus();
+    }
+});
+</script>
+{% endblock %}

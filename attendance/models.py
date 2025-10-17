@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
+import uuid
 
 
 class Department(models.Model):
@@ -64,6 +65,20 @@ class Staff(models.Model):
         null=True,
         help_text="Upload a profile picture (optional)",
     )
+    
+    # Barcode for authentication
+    barcode = models.CharField(
+        max_length=100,
+        unique=True,
+        blank=True,
+        help_text="Unique barcode/QR code for staff authentication"
+    )
+
+    def save(self, *args, **kwargs):
+        # Generate unique barcode if not exists
+        if not self.barcode:
+            self.barcode = f"STAFF-{uuid.uuid4().hex[:12].upper()}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
@@ -146,7 +161,7 @@ class LeaveRequest(models.Model):
 
     REQUEST_TYPE_CHOICES = [
         ("Leave", _("Leave")),
-        ("Suggestion", _("Suggestion")),
+        ("Suggestion_box", _("Suggestion_box")),
         ("Remote Work", _("Remote Work")),
     ]
     STATUS_CHOICES = [
@@ -170,8 +185,12 @@ class LeaveRequest(models.Model):
         default="Leave",
         help_text=_("Type of request: Leave or Remote Work"),
     )
-    start_date = models.DateField(_("start date"), help_text=_("First day of leave"))
-    end_date = models.DateField(_("end date"), help_text=_("Last day of leave"))
+    start_date = models.DateField(
+        _("start date"), help_text=_("First day of leave"), null=True, blank=True
+    )
+    end_date = models.DateField(
+        _("end date"), help_text=_("Last day of leave"), null=True, blank=True
+    )
     reason = models.TextField(_("reason"), help_text=_("Reason for leave"))
     status = models.CharField(
         _("status"),

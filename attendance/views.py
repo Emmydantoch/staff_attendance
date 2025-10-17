@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 
+
 # List all time off requests for the current user (or all for admin)
 @login_required
 def all_time_off(request):
@@ -45,6 +46,8 @@ def register(request):
     """
     Handle user registration with the custom user model.
     """
+    from .models import Staff
+    
     if request.user.is_authenticated:
         messages.info(request, _("You are already logged in."))
         return redirect("dashboard")
@@ -57,6 +60,16 @@ def register(request):
                 user = form.save(commit=False)
                 user.set_password(form.cleaned_data["password1"])
                 user.save()
+
+                # Create Staff profile for the user
+                Staff.objects.create(
+                    user=user,
+                    department=user.department,
+                    phone=user.phone,
+                    position=user.position if hasattr(user, 'position') else '',
+                    bio=user.bio if hasattr(user, 'bio') else '',
+                    is_active=True
+                )
 
                 # Log the successful registration
                 logger.info(f"New user registered: {user.username} ({user.email})")
@@ -133,6 +146,8 @@ def sign_in_out(request):
                 request.session["status_message"] = (
                     "You signed out successfully. Goodbye!"
                 )
+                # Ask user to leave a note after signing out
+                request.session["prompt_attendance_note"] = attendance.id
                 request.session["sign_time"] = str(attendance.sign_out)
                 return redirect("sign_in_out")
             else:
@@ -147,6 +162,8 @@ def sign_in_out(request):
     if "status_message" in request.session:
         status_message = request.session.pop("status_message")
         sign_time = request.session.pop("sign_time", None)
+    # Pop the prompt flag for attendance note (if set) so template can show modal
+    prompt_attendance_note = request.session.pop("prompt_attendance_note", None)
 
     # Control which button/form to show
     if not attendance.sign_in:
@@ -167,6 +184,7 @@ def sign_in_out(request):
             "show_sign_out": show_sign_out,
             "status_message": status_message,
             "sign_time": sign_time,
+            "prompt_attendance_note": prompt_attendance_note,
         },
     )
 
@@ -183,6 +201,28 @@ def attendance_list(request):
         attendances = attendances.filter(date=request.GET["date"])
 
     return render(request, "attendance_list.html", {"attendances": attendances})
+
+
+@login_required
+def save_attendance_note(request):
+    """AJAX endpoint to save a note for an attendance record."""
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            attendance_id = data.get("attendance_id")
+            note = data.get("note", "").strip()
+            att = Attendance.objects.get(id=attendance_id, user=request.user)
+            att.notes = note
+            att.save()
+            return JsonResponse({"status": "ok"})
+        except Attendance.DoesNotExist:
+            return JsonResponse(
+                {"status": "error", "message": "Attendance not found"}, status=404
+            )
+        except Exception as e:
+            logger.exception("Error saving attendance note")
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    return JsonResponse({"status": "error", "message": "Invalid method"}, status=405)
 
 
 @login_required
@@ -247,7 +287,7 @@ def leave_request(request):
             leave = form.save(commit=False)
             leave.user = request.user
             leave.save()
-            messages.success(request, "Leave request submitted.")
+            messages.success(request, "request submitted.")
             return redirect("sign_in_out")
     else:
         form = LeaveRequestForm()
@@ -482,3 +522,84 @@ def reject_leave_request(request, leave_id):
         f"Leave request for {leave.user.get_full_name() or leave.user.username} rejected.",
     )
     return redirect("dashboard")
+
+
+# Barcode/QR Code Views
+@login_required
+def my_barcode(request):
+    """Display the user's barcode/QR code for scanning"""
+    from .models import Staff
+    try:
+        staff = Staff.objects.get(user=request.user)
+        return render(request, "my_barcode.html", {"staff": staff})
+    except Staff.DoesNotExist:
+        messages.error(request, "Staff profile not found. Please contact admin.")
+        return redirect("dashboard")
+
+
+def barcode_scan_page(request):
+    """Page for scanning barcodes to sign in/out"""
+    return render(request, "barcode_scan.html")
+
+
+@require_POST
+def barcode_authenticate(request):
+    """Authenticate user via barcode and perform sign in/out"""
+    from .models import Staff
+    
+    try:
+        data = json.loads(request.body)
+        barcode = data.get("barcode", "").strip()
+        
+        if not barcode:
+            return JsonResponse({"success": False, "message": "No barcode provided"}, status=400)
+        
+        # Find staff by barcode
+        try:
+            staff = Staff.objects.get(barcode=barcode)
+            user = staff.user
+        except Staff.DoesNotExist:
+            return JsonResponse({"success": False, "message": "Invalid barcode"}, status=404)
+        
+        # Check if user is active
+        if not staff.is_active:
+            return JsonResponse({"success": False, "message": "Staff account is inactive"}, status=403)
+        
+        # Get or create attendance for today
+        today = timezone.now().date()
+        attendance, created = Attendance.objects.get_or_create(
+            user=user, date=today, defaults={"sign_in": timezone.now()}
+        )
+        
+        # Determine action: sign in or sign out
+        if not attendance.sign_in:
+            attendance.sign_in = timezone.now()
+            attendance.save()
+            return JsonResponse({
+                "success": True,
+                "action": "sign_in",
+                "message": f"Welcome {user.get_full_name() or user.username}! You signed in successfully.",
+                "time": attendance.sign_in.strftime("%H:%M:%S"),
+                "user": user.get_full_name() or user.username
+            })
+        elif attendance.sign_in and not attendance.sign_out:
+            attendance.sign_out = timezone.now()
+            attendance.save()
+            return JsonResponse({
+                "success": True,
+                "action": "sign_out",
+                "message": f"Goodbye {user.get_full_name() or user.username}! You signed out successfully.",
+                "time": attendance.sign_out.strftime("%H:%M:%S"),
+                "user": user.get_full_name() or user.username
+            })
+        else:
+            return JsonResponse({
+                "success": False,
+                "message": "You have already completed sign in/out for today."
+            })
+            
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "message": "Invalid request data"}, status=400)
+    except Exception as e:
+        logger.error(f"Error in barcode authentication: {str(e)}", exc_info=True)
+        return JsonResponse({"success": False, "message": "An error occurred"}, status=500)

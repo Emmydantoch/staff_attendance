@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Request Time Off or Remote Work</h2>
+<h2 class="text-white">Request Time Off or Remote Work</h2>
 <form method="post" class="p-4 rounded shadow-sm bg-white" style="max-width: 500px; margin: auto;">
     {% csrf_token %}
     <div class="mb-3">
         <label for="id_type" class="form-label">Request Type</label>
         {{ form.type }}
     </div>
-    <div class="mb-3">
+    <div class="mb-3" id="start-date-container">
         <label for="id_start_date" class="form-label">Start Date</label>
         {{ form.start_date }}
     </div>
-    <div class="mb-3">
+    <div class="mb-3" id="end-date-container">
         <label for="id_end_date" class="form-label">End Date</label>
         {{ form.end_date }}
     </div>
@@ -21,4 +21,39 @@
     </div>
     <button type="submit" class="btn btn-primary w-100">Submit Request</button>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('id_type');
+    const startContainer = document.getElementById('start-date-container');
+    const endContainer = document.getElementById('end-date-container');
+
+    function toggleDateFields() {
+        if (!typeSelect) return;
+        const value = (typeSelect.value || '').toString().toLowerCase();
+        // treat any value that contains 'suggest' as a suggestion type
+        const isSuggestion = value.includes('suggest');
+
+        if (isSuggestion) {
+            // hide date fields
+            if (startContainer) startContainer.style.display = 'none';
+            if (endContainer) endContainer.style.display = 'none';
+        } else {
+            // show date fields
+            if (startContainer) startContainer.style.display = '';
+            if (endContainer) endContainer.style.display = '';
+        }
+    }
+
+    // Initial toggle on page load
+    toggleDateFields();
+
+    // Toggle whenever the type select changes
+    if (typeSelect) {
+        typeSelect.addEventListener('change', toggleDateFields);
+    }
+});
+</script>
 {% endblock %}

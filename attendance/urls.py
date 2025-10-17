@@ -11,6 +11,9 @@ urlpatterns = [
         "export/<str:format_type>/", views.export_attendance, name="export_attendance"
     ),
     path("leave-request/", views.leave_request, name="leave_request"),
+    path(
+        "attendance/save-note/", views.save_attendance_note, name="save_attendance_note"
+    ),
     path("dashboard/", views.dashboard, name="dashboard"),
     path(
         "dashboard/chart-data/",
@@ -28,4 +31,8 @@ urlpatterns = [
         views.reject_leave_request,
         name="reject_leave_request",
     ),
+    # Barcode/QR Code URLs
+    path("my-barcode/", views.my_barcode, name="my_barcode"),
+    path("barcode-scan/", views.barcode_scan_page, name="barcode_scan_page"),
+    path("barcode-authenticate/", views.barcode_authenticate, name="barcode_authenticate"),
 ]
