@@ -61,14 +61,16 @@ def register(request):
                 user.set_password(form.cleaned_data["password1"])
                 user.save()
 
-                # Create Staff profile for the user
-                Staff.objects.create(
+                # Create Staff profile for the user (if not already created by signal)
+                staff, created = Staff.objects.get_or_create(
                     user=user,
-                    department=user.department,
-                    phone=user.phone,
-                    position=user.position if hasattr(user, 'position') else '',
-                    bio=user.bio if hasattr(user, 'bio') else '',
-                    is_active=True
+                    defaults={
+                        'department': user.department if hasattr(user, 'department') else None,
+                        'phone': user.phone if hasattr(user, 'phone') else '',
+                        'position': user.position if hasattr(user, 'position') else '',
+                        'bio': user.bio if hasattr(user, 'bio') else '',
+                        'is_active': True
+                    }
                 )
 
                 # Log the successful registration
