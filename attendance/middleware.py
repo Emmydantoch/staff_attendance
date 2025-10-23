@@ -1,4 +1,5 @@
 from django.http import HttpResponseForbidden
+from django.conf import settings
 
 
 class RestrictIPMiddleware:
@@ -10,18 +11,21 @@ class RestrictIPMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Only restrict for sign-in/out views
-        if request.path.startswith("/sign-in-out/"):
-            allowed_ips = [
-                '127.0.0.1'
-                # 'fe80::c249:f89b:70c2:df6%10'
-                # "172.16.20.10",  # Replace with your allowed system's IPs
-                # "192.168.1.101",
-                # "192.168.1.102",
+        protected_prefixes = (
+            "/sign-in-out/",
+            "/barcode-authenticate/",
+            "/barcode-scan/",
+        )
+        if any(request.path.startswith(p) for p in protected_prefixes):
+            allowed_ips = getattr(settings, "ALLOWED_SIGNIN_IPS", ["172.16.20.10"]) or [
+                "127.0.0.1",
+                "::1",
             ]
-            ip = request.META.get("REMOTE_ADDR")
+            xff = request.META.get("HTTP_X_FORWARDED_FOR")
+            if xff:
+                ip = xff.split(",")[0].strip()
+            else:
+                ip = request.META.get("REMOTE_ADDR")
             if ip not in allowed_ips:
-                return HttpResponseForbidden(
-                    "Sign-in/out allowed only from the office systems."
-                )
+                return HttpResponseForbidden("Sign-in/out allowed only from the office systems.")
         return self.get_response(request)

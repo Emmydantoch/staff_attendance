@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Department, Staff, Attendance, LeaveRequest
+from .models import Department, Staff, Attendance, LeaveRequest, TodoItem
 
 
 @admin.register(Department)
@@ -53,3 +53,18 @@ class LeaveRequestAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} leave request(s) rejected.")
 
     reject_selected.short_description = "Reject selected leave requests"
+
+
+@admin.register(TodoItem)
+class TodoItemAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "title",
+        "status",
+        "created_at",
+        "started_at",
+        "completed_at",
+    )
+    search_fields = ("user__username", "user__first_name", "user__last_name", "title")
+    list_filter = ("status", "created_at", "user")
+    readonly_fields = ("created_at", "updated_at")

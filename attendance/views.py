@@ -469,27 +469,107 @@ def dashboard(request):
 
 @login_required
 def attendance_chart_data(request):
-    """Return JSON with labels and data for the last 7 days late arrivals (admin only)."""
+    """Return JSON with labels and data for attendance based on time range (admin only)."""
     if not request.user.is_staff:
         return JsonResponse({"error": "forbidden"}, status=403)
 
     try:
+        time_range = request.GET.get('range', 'this_week')
         today = timezone.now().date()
-        end_date = today
-        start_date = end_date - timedelta(days=6)
-        date_range = [start_date + timedelta(days=x) for x in range(7)]
-        labels = [d.strftime("%Y-%m-%d") for d in date_range]
-        late_threshold = (
-            timezone.now().replace(hour=9, minute=0, second=0, microsecond=0).time()
-        )
-        data = [
+        late_threshold = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0).time()
+        
+        # Calculate date range based on selection
+        if time_range == 'this_week':
+            # Current week (last 7 days)
+            end_date = today
+            start_date = end_date - timedelta(days=6)
+            date_range = [start_date + timedelta(days=x) for x in range(7)]
+            labels = [d.strftime("%a, %b %d") for d in date_range]
+            
+        elif time_range == 'last_week':
+            # Previous 7 days
+            end_date = today - timedelta(days=7)
+            start_date = end_date - timedelta(days=6)
+            date_range = [start_date + timedelta(days=x) for x in range(7)]
+            labels = [d.strftime("%a, %b %d") for d in date_range]
+            
+        elif time_range == 'this_month':
+            # Current month
+            start_date = today.replace(day=1)
+            end_date = today
+            days_in_range = (end_date - start_date).days + 1
+            date_range = [start_date + timedelta(days=x) for x in range(days_in_range)]
+            labels = [d.strftime("%b %d") for d in date_range]
+            
+        elif time_range == 'last_month':
+            # Previous month
+            first_day_this_month = today.replace(day=1)
+            last_day_last_month = first_day_this_month - timedelta(days=1)
+            start_date = last_day_last_month.replace(day=1)
+            end_date = last_day_last_month
+            days_in_range = (end_date - start_date).days + 1
+            date_range = [start_date + timedelta(days=x) for x in range(days_in_range)]
+            labels = [d.strftime("%b %d") for d in date_range]
+        else:
+            # Default to this week
+            end_date = today
+            start_date = end_date - timedelta(days=6)
+            date_range = [start_date + timedelta(days=x) for x in range(7)]
+            labels = [d.strftime("%a, %b %d") for d in date_range]
+        
+        # Get late arrivals count for each date
+        late_data = [
             Attendance.objects.filter(date=d, sign_in__time__gt=late_threshold).count()
             for d in date_range
         ]
-        return JsonResponse({"labels": labels, "data": data})
+        
+        # Get total attendance count for each date
+        total_data = [
+            Attendance.objects.filter(date=d, sign_in__isnull=False).count()
+            for d in date_range
+        ]
+        
+        # Get on-time arrivals count for each date
+        on_time_data = [
+            Attendance.objects.filter(date=d, sign_in__isnull=False, sign_in__time__lte=late_threshold).count()
+            for d in date_range
+        ]
+        
+        return JsonResponse({
+            "labels": labels,
+            "late_data": late_data,
+            "total_data": total_data,
+            "on_time_data": on_time_data,
+            "range": time_range
+        })
     except Exception as e:
         logger.error(f"Error generating chart data: {e}", exc_info=True)
         return JsonResponse({"error": "internal"}, status=500)
+
+
+@login_required
+def get_staff_members(request):
+    """Return JSON list of active staff members (admin only)."""
+    if not request.user.is_staff:
+        return JsonResponse({"success": False, "message": "forbidden"}, status=403)
+
+    try:
+        from .models import Staff
+
+        staff_qs = Staff.objects.select_related("user").filter(is_active=True).order_by(
+            "user__first_name", "user__last_name"
+        )
+        members = [
+            {
+                "id": s.user.id,
+                "name": (s.user.get_full_name() or s.user.username),
+            }
+            for s in staff_qs
+        ]
+        return JsonResponse({"success": True, "members": members})
+    except Exception as e:
+        logger.error(f"Error fetching staff members: {e}", exc_info=True)
+        return JsonResponse({"success": False, "message": "internal"}, status=500)
 
 
 # Create your views here.
@@ -581,7 +661,7 @@ def barcode_authenticate(request):
                 "success": True,
                 "action": "sign_in",
                 "message": f"Welcome {user.get_full_name() or user.username}! You signed in successfully.",
-                "time": attendance.sign_in.strftime("%H:%M:%S"),
+                "time": timezone.localtime(attendance.sign_in).strftime("%H:%M:%S"),
                 "user": user.get_full_name() or user.username
             })
         elif attendance.sign_in and not attendance.sign_out:
@@ -591,7 +671,7 @@ def barcode_authenticate(request):
                 "success": True,
                 "action": "sign_out",
                 "message": f"Goodbye {user.get_full_name() or user.username}! You signed out successfully.",
-                "time": attendance.sign_out.strftime("%H:%M:%S"),
+                "time": timezone.localtime(attendance.sign_out).strftime("%H:%M:%S"),
                 "user": user.get_full_name() or user.username
             })
         else:
@@ -605,3 +685,148 @@ def barcode_authenticate(request):
     except Exception as e:
         logger.error(f"Error in barcode authentication: {str(e)}", exc_info=True)
         return JsonResponse({"success": False, "message": "An error occurred"}, status=500)
+
+
+# Todo List Views
+@login_required
+def get_todos(request):
+    """Get all todo items for the current user, grouped by status"""
+    from .models import TodoItem
+    
+    try:
+        todos = TodoItem.objects.filter(user=request.user).order_by('-created_at')
+        
+        todo_list = {
+            'TODO': [],
+            'ONGOING': [],
+            'DONE': []
+        }
+        
+        for todo in todos:
+            todo_data = {
+                'id': todo.id,
+                'title': todo.title,
+                'description': todo.description,
+                'status': todo.status,
+                'created_at': todo.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'started_at': todo.started_at.strftime('%Y-%m-%d %H:%M:%S') if todo.started_at else None,
+                'completed_at': todo.completed_at.strftime('%Y-%m-%d %H:%M:%S') if todo.completed_at else None,
+            }
+            todo_list[todo.status].append(todo_data)
+        
+        return JsonResponse({'success': True, 'todos': todo_list})
+    except Exception as e:
+        logger.error(f"Error fetching todos: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to fetch todos'}, status=500)
+
+
+@login_required
+@require_POST
+def create_todo(request):
+    """Create a new todo item"""
+    from .models import TodoItem
+    
+    try:
+        data = json.loads(request.body)
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+        
+        if not title:
+            return JsonResponse({'success': False, 'message': 'Title is required'}, status=400)
+        
+        todo = TodoItem.objects.create(
+            user=request.user,
+            title=title,
+            description=description,
+            status='TODO'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Todo item created successfully',
+            'todo': {
+                'id': todo.id,
+                'title': todo.title,
+                'description': todo.description,
+                'status': todo.status,
+                'created_at': todo.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'started_at': None,
+                'completed_at': None,
+            }
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error creating todo: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to create todo'}, status=500)
+
+
+@login_required
+@require_POST
+def update_todo_status(request, todo_id):
+    """Update the status of a todo item"""
+    from .models import TodoItem
+    
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status', '').strip()
+        
+        if new_status not in ['TODO', 'ONGOING', 'DONE']:
+            return JsonResponse({'success': False, 'message': 'Invalid status'}, status=400)
+        
+        todo = TodoItem.objects.get(id=todo_id, user=request.user)
+        old_status = todo.status
+        
+        # Update status and timestamps
+        todo.status = new_status
+        
+        if new_status == 'ONGOING' and old_status == 'TODO':
+            todo.started_at = timezone.now()
+        elif new_status == 'DONE':
+            todo.completed_at = timezone.now()
+            if not todo.started_at:
+                todo.started_at = timezone.now()
+        
+        todo.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Todo status updated successfully',
+            'todo': {
+                'id': todo.id,
+                'title': todo.title,
+                'description': todo.description,
+                'status': todo.status,
+                'created_at': todo.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'started_at': todo.started_at.strftime('%Y-%m-%d %H:%M:%S') if todo.started_at else None,
+                'completed_at': todo.completed_at.strftime('%Y-%m-%d %H:%M:%S') if todo.completed_at else None,
+            }
+        })
+    except TodoItem.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Todo item not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error updating todo status: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to update todo status'}, status=500)
+
+
+@login_required
+@require_POST
+def delete_todo(request, todo_id):
+    """Delete a todo item"""
+    from .models import TodoItem
+    
+    try:
+        todo = TodoItem.objects.get(id=todo_id, user=request.user)
+        todo.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Todo item deleted successfully'
+        })
+    except TodoItem.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Todo item not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error deleting todo: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to delete todo'}, status=500)

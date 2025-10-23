@@ -249,4 +249,94 @@ class LeaveRequest(models.Model):
         return self.status == "Pending"
 
 
+class TodoItem(models.Model):
+    """
+    Model to track todo items for users with status tracking and dates.
+    """
+    
+    STATUS_CHOICES = [
+        ("TODO", _("To Do")),
+        ("ONGOING", _("Ongoing")),
+        ("DONE", _("Done")),
+    ]
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="todo_items",
+        verbose_name=_("user"),
+        help_text=_("User who created this todo item"),
+    )
+    title = models.CharField(
+        _("title"),
+        max_length=255,
+        help_text=_("Title of the todo item"),
+    )
+    description = models.TextField(
+        _("description"),
+        blank=True,
+        help_text=_("Optional description of the todo item"),
+    )
+    status = models.CharField(
+        _("status"),
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="TODO",
+        help_text=_("Current status of the todo item"),
+    )
+    created_at = models.DateTimeField(
+        _("created at"),
+        auto_now_add=True,
+        help_text=_("When this todo item was created"),
+    )
+    started_at = models.DateTimeField(
+        _("started at"),
+        null=True,
+        blank=True,
+        help_text=_("When this todo item was moved to ongoing"),
+    )
+    completed_at = models.DateTimeField(
+        _("completed at"),
+        null=True,
+        blank=True,
+        help_text=_("When this todo item was completed"),
+    )
+    updated_at = models.DateTimeField(
+        _("updated at"),
+        auto_now=True,
+        help_text=_("When this todo item was last updated"),
+    )
+    
+    class Meta:
+        verbose_name = _("todo item")
+        verbose_name_plural = _("todo items")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "status"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["created_at"]),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username} - {self.title} ({self.status})"
+    
+    def move_to_ongoing(self):
+        """Move todo item to ongoing status and set started_at timestamp."""
+        from django.utils import timezone
+        if self.status == "TODO":
+            self.status = "ONGOING"
+            self.started_at = timezone.now()
+            self.save()
+    
+    def move_to_done(self):
+        """Move todo item to done status and set completed_at timestamp."""
+        from django.utils import timezone
+        if self.status in ["TODO", "ONGOING"]:
+            self.status = "DONE"
+            self.completed_at = timezone.now()
+            if not self.started_at:
+                self.started_at = timezone.now()
+            self.save()
+
+
 # Create your models here.

@@ -35,4 +35,11 @@ urlpatterns = [
     path("my-barcode/", views.my_barcode, name="my_barcode"),
     path("barcode-scan/", views.barcode_scan_page, name="barcode_scan_page"),
     path("barcode-authenticate/", views.barcode_authenticate, name="barcode_authenticate"),
+    # Todo List URLs
+    path("todos/", views.get_todos, name="get_todos"),
+    path("todos/create/", views.create_todo, name="create_todo"),
+    path("todos/<int:todo_id>/update-status/", views.update_todo_status, name="update_todo_status"),
+    path("todos/<int:todo_id>/delete/", views.delete_todo, name="delete_todo"),
+    # Staff API
+    path("api/staff-members/", views.get_staff_members, name="get_staff_members"),
 ]

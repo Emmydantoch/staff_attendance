@@ -172,6 +172,191 @@
         background-color: rgba(108, 117, 125, 0.1);
         color: #6c757d;
     }
+    
+    /* Todo List Styles */
+    .todo-container {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .todo-column {
+        flex: 1;
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.10);
+    }
+    
+    .todo-column-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid;
+    }
+    
+    .todo-column.todo-todo .todo-column-header {
+        border-color: #0d6efd;
+    }
+    
+    .todo-column.todo-ongoing .todo-column-header {
+        border-color: #ffc107;
+    }
+    
+    .todo-column.todo-done .todo-column-header {
+        border-color: #198754;
+    }
+    
+    .todo-column-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .todo-count {
+        background: rgba(0,0,0,0.1);
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .todo-item {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        cursor: move;
+        transition: all 0.3s ease;
+        border-left: 3px solid;
+    }
+    
+    .todo-column.todo-todo .todo-item {
+        border-left-color: #0d6efd;
+    }
+    
+    .todo-column.todo-ongoing .todo-item {
+        border-left-color: #ffc107;
+    }
+    
+    .todo-column.todo-done .todo-item {
+        border-left-color: #198754;
+    }
+    
+    .todo-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .todo-item-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+    }
+    
+    .todo-item-description {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.75rem;
+    }
+    
+    .todo-item-dates {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-bottom: 0.75rem;
+    }
+    
+    .todo-item-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .todo-item-actions .btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+    }
+    
+    .add-todo-btn {
+        width: 100%;
+        border: 2px dashed #dee2e6;
+        background: transparent;
+        color: #6c757d;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .add-todo-btn:hover {
+        border-color: #0d6efd;
+        color: #0d6efd;
+        background: rgba(13, 110, 253, 0.05);
+    }
+    
+    .todo-empty {
+        text-align: center;
+        color: #6c757d;
+        padding: 2rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Duty Delegation Styles */
+    .priority-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .priority-low {
+        background-color: rgba(13, 110, 253, 0.1);
+        color: #0d6efd;
+    }
+    
+    .priority-medium {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+    }
+    
+    .priority-high {
+        background-color: rgba(255, 87, 34, 0.1);
+        color: #ff5722;
+    }
+    
+    .priority-urgent {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    .duty-status-pending {
+        background-color: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+    }
+    
+    .duty-status-in-progress {
+        background-color: rgba(13, 110, 253, 0.1);
+        color: #0d6efd;
+    }
+    
+    .duty-status-completed {
+        background-color: rgba(25, 135, 84, 0.1);
+        color: #198754;
+    }
+    
+    .duty-status-overdue {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
 </style>
 {% endblock %}
 
@@ -297,46 +482,59 @@
         </div>
     </div>
 
-    <div class="row g-4 mb-4">
-        <!-- Chart Section -->
-        <div class="col-lg-8">
-            <div class="card h-100">
-                <div class="card-header bg-white border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Weekly Attendance Overview</h5>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="timeRangeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                This Week
+        <div class="row g-4 mb-4">
+            <!-- Duty Delegation Section -->
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Delegate Duties</h5>
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#delegateDutyModal">
+                                <i class="fas fa-plus me-1"></i>Assign New Duty
                             </button>
-                            <ul class="dropdown-menu" aria-labelledby="timeRangeDropdown">
-                                <li><a class="dropdown-item active" href="#">This Week</a></li>
-                                <li><a class="dropdown-item" href="#">Last Week</a></li>
-                                <li><a class="dropdown-item" href="#">This Month</a></li>
-                                <li><a class="dropdown-item" href="#">Last Month</a></li>
-                            </ul>
                         </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <!-- Hidden element to hold chart data for real-time updates -->
-                    <div id="chart-data" data-labels='{{ chart_labels|default:"[]"|safe }}' data-data='{{ chart_data|default:"[]"|safe }}' style="display:none;"></div>
-                    <div style="position: relative; height: 300px;>
-                        <canvas id="attendanceChart"></canvas>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Staff Member</th>
+                                        <th>Duty/Task</th>
+                                        <th>Priority</th>
+                                        <th>Due Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="delegated-duties-list">
+                                    <!-- Duties will be loaded here dynamically -->
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
+                                            No duties assigned yet. Click "Assign New Duty" to get started.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-0 text-center">
+                        <a href="#" class="text-decoration-none">View All Delegated Duties <i class="fas fa-arrow-right ms-1"></i></a>
                     </div>
                 </div>
             </div>
-        </div>
-        <!-- Recent Activity -->
-        <div class="col-lg-4 d-flex align-items-stretch">
-            <div class="card w-100 h-100">
-                <div class="card-header bg-white border-0">
-                    <h5 class="mb-0">Recent Activity</h5>
-                </div>
-                <div class="card-body p-0">
-                    <ul class="recent-activity p-3">
-                        {% for att in recent_attendance %}
-                        <li class="activity-item">
-                            <div class="activity-icon {% if att.sign_in and att.sign_in|time > '09:00:00' %}late{% elif att.sign_in %}on-time{% else %}absent{% endif %}">
+            <!-- Recent Activity -->
+            <div class="col-lg-4 d-flex align-items-stretch">
+                <div class="card w-100 h-100">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0">Recent Activity</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="recent-activity p-3">
+                            {% for att in recent_attendance %}
+                            <li class="activity-item">
+                                <div class="activity-icon {% if att.sign_in and att.sign_in|time > '09:00:00' %}late{% elif att.sign_in %}on-time{% else %}absent{% endif %}">
                                 {% if att.sign_in and att.sign_in|time > '09:00:00' %}
                                     <i class="fas fa-user-clock"></i>
                                 {% elif att.sign_in %}
@@ -525,7 +723,7 @@
                     <h3 class="mb-1">{{ days_worked|default:0 }}</h3>
                     <p class="text-muted mb-0">Days Worked This Month</p>
                     <div class="progress mt-3" style="height: 6px;">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ days_worked_percent|default:0 }}%;" aria-valuenow="{{ days_worked_percent|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ days_worked_percent|default:0 }}%" aria-valuenow="{{ days_worked_percent|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <p class="small text-muted mt-2 mb-0">of monthly target</p>
                 </div>
@@ -674,6 +872,156 @@
         </div>
     </div>
     {% endif %}
+    
+    <!-- Todo List Section (Available for both Admin and Users) -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>My To-Do List</h5>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTodoModal">
+                            <i class="fas fa-plus me-1"></i>Add Task
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="todo-container">
+                        <!-- To Do Column -->
+                        <div class="todo-column todo-todo">
+                            <div class="todo-column-header">
+                                <div class="todo-column-title">
+                                    <i class="fas fa-list"></i>
+                                    To Do
+                                    <span class="todo-count" id="todo-count">0</span>
+                                </div>
+                            </div>
+                            <div id="todo-list" class="todo-items-container">
+                                <div class="todo-empty">No tasks yet</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Ongoing Column -->
+                        <div class="todo-column todo-ongoing">
+                            <div class="todo-column-header">
+                                <div class="todo-column-title">
+                                    <i class="fas fa-spinner"></i>
+                                    Ongoing
+                                    <span class="todo-count" id="ongoing-count">0</span>
+                                </div>
+                            </div>
+                            <div id="ongoing-list" class="todo-items-container">
+                                <div class="todo-empty">No ongoing tasks</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Done Column -->
+                        <div class="todo-column todo-done">
+                            <div class="todo-column-header">
+                                <div class="todo-column-title">
+                                    <i class="fas fa-check-circle"></i>
+                                    Done
+                                    <span class="todo-count" id="done-count">0</span>
+                                </div>
+                            </div>
+                            <div id="done-list" class="todo-items-container">
+                                <div class="todo-empty">No completed tasks</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Todo Modal -->
+<div class="modal fade" id="addTodoModal" tabindex="-1" aria-labelledby="addTodoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addTodoModalLabel">Add New Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTodoForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="todoTitle" class="form-label">Task Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="todoTitle" required placeholder="Enter task title">
+                    </div>
+                    <div class="mb-3">
+                        <label for="todoDescription" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="todoDescription" rows="3" placeholder="Enter task description"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addTodo()">Add Task</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delegate Duty Modal -->
+<div class="modal fade" id="delegateDutyModal" tabindex="-1" aria-labelledby="delegateDutyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="delegateDutyModalLabel"><i class="fas fa-user-plus me-2"></i>Delegate New Duty</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="delegateDutyForm">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="dutyStaffMember" class="form-label">Assign To <span class="text-danger">*</span></label>
+                            <select class="form-select" id="dutyStaffMember" required>
+                                <option value="">Select Staff Member...</option>
+                                <!-- Staff members will be loaded dynamically -->
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="dutyPriority" class="form-label">Priority <span class="text-danger">*</span></label>
+                            <select class="form-select" id="dutyPriority" required>
+                                <option value="">Select Priority...</option>
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Urgent">Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="dutyTitle" class="form-label">Duty/Task Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="dutyTitle" required placeholder="Enter duty title">
+                    </div>
+                    <div class="mb-3">
+                        <label for="dutyDescription" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="dutyDescription" rows="4" required placeholder="Describe the duty in detail..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="dutyDueDate" class="form-label">Due Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="dutyDueDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="dutyDueTime" class="form-label">Due Time</label>
+                            <input type="time" class="form-control" id="dutyDueTime">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="delegateDuty()">
+                    <i class="fas fa-paper-plane me-1"></i>Assign Duty
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -702,8 +1050,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <!-- Bootstrap 5 JS (required for collapse) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoA6DQD1P1L1QnYh6tY1QZ6V9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
 <script>
@@ -714,103 +1060,439 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Attendance Chart (real-time)
-    const ctx = document.getElementById('attendanceChart');
-    const chartDataElem = document.getElementById('chart-data');
-    let attendanceChart = null;
-
-    function createOrUpdateChart(labels, data) {
-        if (!ctx) return;
-        if (!attendanceChart) {
-            attendanceChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Late Arrivals',
-                        data: data,
-                        backgroundColor: 'rgba(74, 111, 165, 0.8)',
-                        borderColor: 'rgba(74, 111, 165, 1)',
-                        borderWidth: 1,
-                        borderRadius: 4,
-                        barPercentage: 0.7
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#2c3e50',
-                            titleFont: { size: 14, weight: '600' },
-                            bodyFont: { size: 13 },
-                            padding: 12,
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.parsed.y} ${context.parsed.y === 1 ? 'person' : 'people'} late`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { stepSize: 1, precision: 0 },
-                            grid: { drawBorder: false, color: 'rgba(0, 0, 0, 0.05)' }
-                        },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        } else {
-            attendanceChart.data.labels = labels;
-            attendanceChart.data.datasets[0].data = data;
-            attendanceChart.update();
-        }
-    }
-
-    // Initialize chart with server-provided data if available
-    if (chartDataElem) {
-        try {
-            const initialLabels = JSON.parse(chartDataElem.dataset.labels || '[]');
-            const initialData = JSON.parse(chartDataElem.dataset.data || '[]');
-            if (initialLabels.length && initialData.length) {
-                createOrUpdateChart(initialLabels, initialData);
-            } else {
-                createOrUpdateChart(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], [0,0,0,0,0,0,0]);
-            }
-        } catch (err) {
-            console.error('Error parsing initial chart data', err);
-            createOrUpdateChart(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], [0,0,0,0,0,0,0]);
-        }
-    }
-
-    // Poll the server every 10 seconds for fresh chart data
-    async function pollChartData() {
-        try {
-            const resp = await fetch('{% url "attendance_chart_data" %}');
-            if (!resp.ok) throw new Error('Network response was not ok');
-            const json = await resp.json();
-            if (json.labels && json.data) {
-                createOrUpdateChart(json.labels, json.data);
-            }
-        } catch (err) {
-            console.warn('Failed to fetch chart data:', err);
-        }
-    }
-
-    // Start polling only for staff users (chart limited to admin in views)
-    {% if is_staff %}
-        setInterval(pollChartData, 10000);
-    {% endif %}
-
     // Fix for Bootstrap collapse not working on dynamically rendered elements
     // (re-initialize collapse for all .collapse elements)
     document.querySelectorAll('.collapse').forEach(function (el) {
         new bootstrap.Collapse(el, { toggle: false });
     });
+    
+    // Load todos on page load
+    loadTodos();
+});
+
+// Todo List Functions
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function loadTodos() {
+    fetch('{% url "get_todos" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderTodos(data.todos);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading todos:', error);
+        });
+}
+
+function renderTodos(todos) {
+    const todoList = document.getElementById('todo-list');
+    const ongoingList = document.getElementById('ongoing-list');
+    const doneList = document.getElementById('done-list');
+    
+    // Clear existing content
+    todoList.innerHTML = '';
+    ongoingList.innerHTML = '';
+    doneList.innerHTML = '';
+    
+    // Update counts
+    document.getElementById('todo-count').textContent = todos.TODO.length;
+    document.getElementById('ongoing-count').textContent = todos.ONGOING.length;
+    document.getElementById('done-count').textContent = todos.DONE.length;
+    
+    // Render TODO items
+    if (todos.TODO.length === 0) {
+        todoList.innerHTML = '<div class="todo-empty">No tasks yet</div>';
+    } else {
+        todos.TODO.forEach(todo => {
+            todoList.innerHTML += createTodoHTML(todo, 'TODO');
+        });
+    }
+    
+    // Render ONGOING items
+    if (todos.ONGOING.length === 0) {
+        ongoingList.innerHTML = '<div class="todo-empty">No ongoing tasks</div>';
+    } else {
+        todos.ONGOING.forEach(todo => {
+            ongoingList.innerHTML += createTodoHTML(todo, 'ONGOING');
+        });
+    }
+    
+    // Render DONE items
+    if (todos.DONE.length === 0) {
+        doneList.innerHTML = '<div class="todo-empty">No completed tasks</div>';
+    } else {
+        todos.DONE.forEach(todo => {
+            doneList.innerHTML += createTodoHTML(todo, 'DONE');
+        });
+    }
+}
+
+function createTodoHTML(todo, status) {
+    let dateInfo = `<div class="todo-item-dates">
+        <i class="far fa-calendar-plus"></i> Created: ${formatDate(todo.created_at)}`;
+    
+    if (todo.started_at) {
+        dateInfo += `<br><i class="far fa-play-circle"></i> Started: ${formatDate(todo.started_at)}`;
+    }
+    
+    if (todo.completed_at) {
+        dateInfo += `<br><i class="far fa-check-circle"></i> Completed: ${formatDate(todo.completed_at)}`;
+    }
+    
+    dateInfo += '</div>';
+    
+    let actions = '<div class="todo-item-actions">';
+    
+    if (status === 'TODO') {
+        actions += `<button class="btn btn-warning btn-sm" onclick="updateTodoStatus(${todo.id}, 'ONGOING')">
+            <i class="fas fa-play"></i> Start
+        </button>`;
+        actions += `<button class="btn btn-success btn-sm" onclick="updateTodoStatus(${todo.id}, 'DONE')">
+            <i class="fas fa-check"></i> Done
+        </button>`;
+    } else if (status === 'ONGOING') {
+        actions += `<button class="btn btn-success btn-sm" onclick="updateTodoStatus(${todo.id}, 'DONE')">
+            <i class="fas fa-check"></i> Done
+        </button>`;
+        actions += `<button class="btn btn-secondary btn-sm" onclick="updateTodoStatus(${todo.id}, 'TODO')">
+            <i class="fas fa-undo"></i> Back
+        </button>`;
+    } else if (status === 'DONE') {
+        actions += `<button class="btn btn-warning btn-sm" onclick="updateTodoStatus(${todo.id}, 'ONGOING')">
+            <i class="fas fa-redo"></i> Reopen
+        </button>`;
+    }
+    
+    actions += `<button class="btn btn-danger btn-sm" onclick="deleteTodo(${todo.id})">
+        <i class="fas fa-trash"></i> Delete
+    </button>`;
+    actions += '</div>';
+    
+    return `
+        <div class="todo-item" data-todo-id="${todo.id}">
+            <div class="todo-item-title">${escapeHtml(todo.title)}</div>
+            ${todo.description ? `<div class="todo-item-description">${escapeHtml(todo.description)}</div>` : ''}
+            ${dateInfo}
+            ${actions}
+        </div>
+    `;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function addTodo() {
+    const title = document.getElementById('todoTitle').value.trim();
+    const description = document.getElementById('todoDescription').value.trim();
+    
+    if (!title) {
+        alert('Please enter a task title');
+        return;
+    }
+    
+    const csrftoken = getCookie('csrftoken');
+    
+    fetch('{% url "create_todo" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({
+            title: title,
+            description: description
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addTodoModal'));
+            modal.hide();
+            
+            // Clear form
+            document.getElementById('todoTitle').value = '';
+            document.getElementById('todoDescription').value = '';
+            
+            // Reload todos
+            loadTodos();
+            
+            // Show success message
+            showToast('Task added successfully!', 'success');
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error adding todo:', error);
+        alert('Failed to add task');
+    });
+}
+
+function updateTodoStatus(todoId, newStatus) {
+    const csrftoken = getCookie('csrftoken');
+    
+    fetch(`/todos/${todoId}/update-status/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({
+            status: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTodos();
+            showToast('Task status updated!', 'success');
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating todo:', error);
+        alert('Failed to update task');
+    });
+}
+
+function deleteTodo(todoId) {
+    if (!confirm('Are you sure you want to delete this task?')) {
+        return;
+    }
+    
+    const csrftoken = getCookie('csrftoken');
+    
+    fetch(`/todos/${todoId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTodos();
+            showToast('Task deleted successfully!', 'success');
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting todo:', error);
+        alert('Failed to delete task');
+    });
+}
+
+function showToast(message, type) {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// Duty Delegation Functions
+function loadStaffMembers() {
+    const staffSelect = document.getElementById('dutyStaffMember');
+    if (!staffSelect) return;
+    
+    staffSelect.innerHTML = '<option value="">Loading...</option>';
+    fetch('{% url "get_staff_members" %}')
+        .then(resp => resp.json())
+        .then(data => {
+            if (!data.success) throw new Error(data.message || 'Failed');
+            staffSelect.innerHTML = '<option value="">Select Staff Member...</option>';
+            data.members.forEach(staff => {
+                const option = document.createElement('option');
+                option.value = staff.id;
+                option.textContent = staff.name;
+                staffSelect.appendChild(option);
+            });
+        })
+        .catch(err => {
+            console.error('Error loading staff members:', err);
+            staffSelect.innerHTML = '<option value="">Unable to load staff</option>';
+        });
+}
+
+function delegateDuty() {
+    const staffMember = document.getElementById('dutyStaffMember').value;
+    const priority = document.getElementById('dutyPriority').value;
+    const title = document.getElementById('dutyTitle').value.trim();
+    const description = document.getElementById('dutyDescription').value.trim();
+    const dueDate = document.getElementById('dutyDueDate').value;
+    const dueTime = document.getElementById('dutyDueTime').value;
+    
+    if (!staffMember || !priority || !title || !description || !dueDate) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    const csrftoken = getCookie('csrftoken');
+    
+    const dutyData = {
+        staff_member: staffMember,
+        priority: priority,
+        title: title,
+        description: description,
+        due_date: dueDate,
+        due_time: dueTime || null
+    };
+    
+    // In production, send to backend: fetch('/api/delegate-duty/', {...})
+    console.log('Delegating duty:', dutyData);
+    
+    // For demo purposes, add to table directly
+    addDutyToTable(dutyData);
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('delegateDutyModal'));
+    modal.hide();
+    
+    // Clear form
+    document.getElementById('delegateDutyForm').reset();
+    
+    showToast('Duty delegated successfully!', 'success');
+}
+
+function addDutyToTable(duty) {
+    const tbody = document.getElementById('delegated-duties-list');
+    
+    // Remove empty state if exists
+    if (tbody.querySelector('td[colspan="6"]')) {
+        tbody.innerHTML = '';
+    }
+    
+    const priorityClass = `priority-${duty.priority.toLowerCase()}`;
+    const staffName = document.querySelector(`#dutyStaffMember option[value="${duty.staff_member}"]`)?.textContent || 'Unknown';
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>
+            <div class="d-flex align-items-center">
+                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(staffName)}&background=4a6fa5&color=fff" 
+                     class="rounded-circle me-2" width="32" height="32" alt="${staffName}">
+                <div>${staffName}</div>
+            </div>
+        </td>
+        <td>
+            <strong>${escapeHtml(duty.title)}</strong>
+            <br><small class="text-muted">${escapeHtml(duty.description).substring(0, 50)}...</small>
+        </td>
+        <td><span class="priority-badge ${priorityClass}">${duty.priority}</span></td>
+        <td>${new Date(duty.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+        <td><span class="badge duty-status-pending">Pending</span></td>
+        <td>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" onclick="viewDutyDetails(this)" title="View Details">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-outline-success" onclick="markDutyComplete(this)" title="Mark Complete">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="btn btn-outline-danger" onclick="deleteDuty(this)" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </td>
+    `;
+    
+    tbody.appendChild(row);
+}
+
+function viewDutyDetails(btn) {
+    const row = btn.closest('tr');
+    const staffName = row.cells[0].textContent.trim();
+    const title = row.cells[1].querySelector('strong').textContent;
+    alert(`Duty Details:\nStaff: ${staffName}\nTask: ${title}\n\n(Full details view would be implemented here)`);
+}
+
+function markDutyComplete(btn) {
+    const row = btn.closest('tr');
+    const statusBadge = row.querySelector('.badge');
+    statusBadge.className = 'badge duty-status-completed';
+    statusBadge.textContent = 'Completed';
+    showToast('Duty marked as completed!', 'success');
+}
+
+function deleteDuty(btn) {
+    if (!confirm('Are you sure you want to delete this duty?')) {
+        return;
+    }
+    
+    const row = btn.closest('tr');
+    row.remove();
+    
+    // Check if table is empty
+    const tbody = document.getElementById('delegated-duties-list');
+    if (tbody.children.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
+                    No duties assigned yet. Click "Assign New Duty" to get started.
+                </td>
+            </tr>
+        `;
+    }
+    
+    showToast('Duty deleted successfully!', 'success');
+}
+
+// Load staff members when modal is opened
+document.addEventListener('DOMContentLoaded', function() {
+    const delegateModal = document.getElementById('delegateDutyModal');
+    if (delegateModal) {
+        delegateModal.addEventListener('show.bs.modal', function() {
+            loadStaffMembers();
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dutyDueDate').setAttribute('min', today);
+        });
+    }
 });
 </script>
 {% endblock %}

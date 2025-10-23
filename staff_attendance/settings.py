@@ -29,6 +29,7 @@ DEBUG = os.environ.get("DEBUG", "True") == "True"
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
+    "172.16.20.10",
     ".pythonanywhere.com",  # Allow all PythonAnywhere subdomains
 ]
 
@@ -145,5 +146,6 @@ LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 
-
-
+ALLOWED_SIGNIN_IPS = [
+    "143.105.174.140",
+]
