@@ -433,6 +433,13 @@ def dashboard(request):
         if hasattr(request.user, "department") and request.user.department:
             department = request.user.department.name
 
+        # Delegated duties
+        from .models import DelegatedDuty
+        my_duties = DelegatedDuty.objects.filter(assigned_to=request.user).order_by("status", "due_date", "-created_at")[:10]
+        delegated_duties_admin = []
+        if request.user.is_staff:
+            delegated_duties_admin = DelegatedDuty.objects.select_related("assigned_to", "assigned_by").order_by("status", "due_date", "-created_at")[:10]
+
         context = {
             "user": request.user,
             "is_staff": request.user.is_staff,
@@ -448,6 +455,7 @@ def dashboard(request):
             "vacation_days_total": vacation_days_total,
             "user_role": user_role,
             "department": department,
+            "my_duties": my_duties,
         }
         if request.user.is_staff:
             context.update(
@@ -458,6 +466,7 @@ def dashboard(request):
                     "pending_leaves": pending_leaves,
                     "active_employees": active_employees,
                     "on_time_percent": on_time_percent,
+                    "delegated_duties": delegated_duties_admin,
                 }
             )
         return render(request, "dashboard.html", context)

@@ -508,13 +508,52 @@
                                     </tr>
                                 </thead>
                                 <tbody id="delegated-duties-list">
-                                    <!-- Duties will be loaded here dynamically -->
+                                    {% for duty in delegated_duties %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="https://ui-avatars.com/api/?name={{ duty.assigned_to.get_full_name|default:duty.assigned_to.username|urlencode }}&background=4a6fa5&color=fff" class="rounded-circle me-2" width="32" height="32" alt="{{ duty.assigned_to.get_full_name|default:duty.assigned_to.username }}">
+                                                <div>
+                                                    {{ duty.assigned_to.get_full_name|default:duty.assigned_to.username }}
+                                                    <div class="small text-muted">by {{ duty.assigned_by.get_full_name|default:duty.assigned_by.username }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">{{ duty.title }}</div>
+                                            <div class="text-muted small">{{ duty.description|default:''|truncatewords:12 }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="priority-badge 
+                                                {% if duty.priority == 'LOW' %}priority-low{% endif %}
+                                                {% if duty.priority == 'MEDIUM' %}priority-medium{% endif %}
+                                                {% if duty.priority == 'HIGH' %}priority-high{% endif %}
+                                                {% if duty.priority == 'URGENT' %}priority-urgent{% endif %}">
+                                                {{ duty.priority|title }}
+                                            </span>
+                                        </td>
+                                        <td>{{ duty.due_date|date:"M d, Y"|default:'—' }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if duty.status == 'Pending' %}duty-status-pending{% endif %}
+                                                {% if duty.status == 'In Progress' %}duty-status-in-progress{% endif %}
+                                                {% if duty.status == 'Completed' %}duty-status-completed{% endif %}
+                                                {% if duty.status == 'Overdue' %}duty-status-overdue{% endif %}">
+                                                {{ duty.status }}
+                                            </span>
+                                        </td>
+                                        <td class="text-nowrap">
+                                            <button class="btn btn-sm btn-outline-secondary" title="View"><i class="fas fa-eye"></i></button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
                                     <tr>
                                         <td colspan="6" class="text-center text-muted py-4">
                                             <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
-                                            No duties assigned yet. Click "Assign New Duty" to get started.
+                                            No delegated duties yet.
                                         </td>
                                     </tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>

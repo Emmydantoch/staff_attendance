@@ -340,3 +340,55 @@ class TodoItem(models.Model):
 
 
 # Create your models here.
+
+
+class DelegatedDuty(models.Model):
+    """
+    Duty delegated by an admin (or any staff) to a specific user.
+    Used for dashboard notifications for all users and admins.
+    """
+
+    PRIORITY_CHOICES = [
+        ("LOW", _("Low")),
+        ("MEDIUM", _("Medium")),
+        ("HIGH", _("High")),
+        ("URGENT", _("Urgent")),
+    ]
+
+    STATUS_CHOICES = [
+        ("Pending", _("Pending")),
+        ("In Progress", _("In Progress")),
+        ("Completed", _("Completed")),
+        ("Overdue", _("Overdue")),
+    ]
+
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="duties_assigned",
+        verbose_name=_("assigned by"),
+    )
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="duties_received",
+        verbose_name=_("assigned to"),
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="LOW")
+    due_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["assigned_to", "status"]),
+            models.Index(fields=["due_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.title} → {self.assigned_to.get_full_name() or self.assigned_to.username}"
