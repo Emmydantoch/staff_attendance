@@ -42,4 +42,7 @@ urlpatterns = [
     path("todos/<int:todo_id>/delete/", views.delete_todo, name="delete_todo"),
     # Staff API
     path("api/staff-members/", views.get_staff_members, name="get_staff_members"),
+    # Delegated Duty URLs
+    path("duties/create/", views.create_delegated_duty, name="create_delegated_duty"),
+    path("duties/", views.get_delegated_duties, name="get_delegated_duties"),
 ]

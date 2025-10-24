@@ -909,6 +909,72 @@
                 </div>
             </div>
         </div>
+        
+        <!-- My Delegated Duties -->
+        <div class="col-12">
+            <div class="card h-100">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Your Delegated Duties</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Assigned By</th>
+                                    <th>Duty/Task</th>
+                                    <th>Priority</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for duty in my_duties %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="https://ui-avatars.com/api/?name={{ duty.assigned_by.get_full_name|default:duty.assigned_by.username|urlencode }}&background=4a6fa5&color=fff" class="rounded-circle me-2" width="32" height="32" alt="{{ duty.assigned_by.get_full_name|default:duty.assigned_by.username }}">
+                                            <div>{{ duty.assigned_by.get_full_name|default:duty.assigned_by.username }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">{{ duty.title }}</div>
+                                        <div class="text-muted small">{{ duty.description|default:''|truncatewords:12 }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="priority-badge 
+                                            {% if duty.priority == 'LOW' %}priority-low{% endif %}
+                                            {% if duty.priority == 'MEDIUM' %}priority-medium{% endif %}
+                                            {% if duty.priority == 'HIGH' %}priority-high{% endif %}
+                                            {% if duty.priority == 'URGENT' %}priority-urgent{% endif %}">
+                                            {{ duty.priority|title }}
+                                        </span>
+                                    </td>
+                                    <td>{{ duty.due_date|date:"M d, Y"|default:'—' }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if duty.status == 'Pending' %}duty-status-pending{% endif %}
+                                            {% if duty.status == 'In Progress' %}duty-status-in-progress{% endif %}
+                                            {% if duty.status == 'Completed' %}duty-status-completed{% endif %}
+                                            {% if duty.status == 'Overdue' %}duty-status-overdue{% endif %}">
+                                            {{ duty.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
+                                        No delegated duties for you yet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     {% endif %}
     
@@ -1413,28 +1479,46 @@ function delegateDuty() {
     const csrftoken = getCookie('csrftoken');
     
     const dutyData = {
-        staff_member: staffMember,
+        assigned_to_id: staffMember,
         priority: priority,
         title: title,
         description: description,
-        due_date: dueDate,
-        due_time: dueTime || null
+        due_date: dueDate
     };
     
-    // In production, send to backend: fetch('/api/delegate-duty/', {...})
-    console.log('Delegating duty:', dutyData);
-    
-    // For demo purposes, add to table directly
-    addDutyToTable(dutyData);
-    
-    // Close modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('delegateDutyModal'));
-    modal.hide();
-    
-    // Clear form
-    document.getElementById('delegateDutyForm').reset();
-    
-    showToast('Duty delegated successfully!', 'success');
+    // Send to backend
+    fetch('{% url "create_delegated_duty" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify(dutyData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('delegateDutyModal'));
+            modal.hide();
+            
+            // Clear form
+            document.getElementById('delegateDutyForm').reset();
+            
+            showToast('Duty delegated successfully!', 'success');
+            
+            // Reload page to show new duty
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error delegating duty:', error);
+        alert('Failed to delegate duty. Please try again.');
+    });
 }
 
 function addDutyToTable(duty) {

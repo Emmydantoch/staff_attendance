@@ -839,3 +839,88 @@ def delete_todo(request, todo_id):
     except Exception as e:
         logger.error(f"Error deleting todo: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'message': 'Failed to delete todo'}, status=500)
+
+
+# Delegated Duty Views
+@login_required
+@require_POST
+def create_delegated_duty(request):
+    """Create a new delegated duty (admin only)"""
+    from .models import DelegatedDuty
+    
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        assigned_to_id = data.get('assigned_to_id')
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+        priority = data.get('priority', 'LOW').upper()
+        due_date = data.get('due_date')
+        
+        if not all([assigned_to_id, title, description]):
+            return JsonResponse({'success': False, 'message': 'Missing required fields'}, status=400)
+        
+        # Get assigned user
+        User = get_user_model()
+        try:
+            assigned_to = User.objects.get(id=assigned_to_id)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'User not found'}, status=404)
+        
+        # Create duty
+        duty = DelegatedDuty.objects.create(
+            assigned_by=request.user,
+            assigned_to=assigned_to,
+            title=title,
+            description=description,
+            priority=priority,
+            due_date=due_date if due_date else None,
+            status='Pending'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Duty delegated successfully',
+            'duty': {
+                'id': duty.id,
+                'title': duty.title,
+                'assigned_to': duty.assigned_to.get_full_name() or duty.assigned_to.username,
+                'priority': duty.priority,
+                'due_date': duty.due_date.strftime('%Y-%m-%d') if duty.due_date else None,
+                'status': duty.status
+            }
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error creating delegated duty: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to create duty'}, status=500)
+
+
+@login_required
+def get_delegated_duties(request):
+    """Get delegated duties for current user"""
+    from .models import DelegatedDuty
+    
+    try:
+        duties = DelegatedDuty.objects.filter(assigned_to=request.user).select_related('assigned_by').order_by('status', 'due_date', '-created_at')
+        
+        duty_list = []
+        for duty in duties:
+            duty_list.append({
+                'id': duty.id,
+                'title': duty.title,
+                'description': duty.description,
+                'priority': duty.priority,
+                'due_date': duty.due_date.strftime('%Y-%m-%d') if duty.due_date else None,
+                'status': duty.status,
+                'assigned_by': duty.assigned_by.get_full_name() or duty.assigned_by.username if duty.assigned_by else 'Unknown',
+                'created_at': duty.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        
+        return JsonResponse({'success': True, 'duties': duty_list})
+    except Exception as e:
+        logger.error(f"Error fetching delegated duties: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to fetch duties'}, status=500)

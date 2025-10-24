@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Department, Staff, Attendance, LeaveRequest, TodoItem
+from .models import Department, Staff, Attendance, LeaveRequest, TodoItem, DelegatedDuty
 
 
 @admin.register(Department)
@@ -68,3 +68,26 @@ class TodoItemAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "user__first_name", "user__last_name", "title")
     list_filter = ("status", "created_at", "user")
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(DelegatedDuty)
+class DelegatedDutyAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "assigned_to",
+        "assigned_by",
+        "priority",
+        "due_date",
+        "status",
+        "created_at",
+    )
+    search_fields = (
+        "title",
+        "assigned_to__username",
+        "assigned_to__first_name",
+        "assigned_to__last_name",
+        "assigned_by__username",
+    )
+    list_filter = ("status", "priority", "due_date", "created_at")
+    readonly_fields = ("created_at", "updated_at")
+    autocomplete_fields = ["assigned_to", "assigned_by"]
