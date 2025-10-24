@@ -22,8 +22,8 @@ class StaffAdmin(admin.ModelAdmin):
 
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
-    list_display = ("user", "date", "sign_in", "sign_out", "notes")
-    search_fields = ("user__username", "user__first_name", "user__last_name", "date")
+    list_display = ("user", "date", "sign_in", "sign_out", "location", "notes")
+    search_fields = ("user__username", "user__first_name", "user__last_name", "date", "location")
     list_filter = ("date", "user")
 
 

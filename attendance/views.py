@@ -132,8 +132,12 @@ def sign_in_out(request):
         form = SignInOutForm(request.POST)
         if form.is_valid():
             action = form.cleaned_data["action"]
+            location = request.POST.get("location", "")  # Get location from form
+            
             if action == "sign_in" and not attendance.sign_in:
                 attendance.sign_in = timezone.now()
+                if location:
+                    attendance.location = location
                 attendance.save()
                 request.session["status_message"] = (
                     "You signed in successfully today. Welcome! we wish you a productive day ahead."
@@ -641,6 +645,7 @@ def barcode_authenticate(request):
     try:
         data = json.loads(request.body)
         barcode = data.get("barcode", "").strip()
+        location = data.get("location", "").strip()
         
         if not barcode:
             return JsonResponse({"success": False, "message": "No barcode provided"}, status=400)
@@ -665,6 +670,8 @@ def barcode_authenticate(request):
         # Determine action: sign in or sign out
         if not attendance.sign_in:
             attendance.sign_in = timezone.now()
+            if location:
+                attendance.location = location
             attendance.save()
             return JsonResponse({
                 "success": True,

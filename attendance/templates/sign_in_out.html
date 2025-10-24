@@ -47,10 +47,16 @@
                     </div>
 
                     {% if show_form %}
-                        <form method="post" class="text-center">
+                        <form method="post" class="text-center" id="attendanceForm">
                             {% csrf_token %}
+                            <input type="hidden" name="location" id="locationField" value="">
                             {% if show_sign_in %}
                                 <input type="hidden" name="action" value="sign_in">
+                                <div class="mb-3">
+                                    <small class="text-muted" id="locationStatus">
+                                        <i class="fas fa-map-marker-alt"></i> Capturing location...
+                                    </small>
+                                </div>
                                 <button type="submit" class="btn btn-lg btn-success px-5 py-2 shadow-sm fw-bold">Sign In</button>
                             {% elif show_sign_out %}
                                 <input type="hidden" name="action" value="sign_out">
@@ -70,6 +76,49 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+        // Capture location on page load for sign in
+        const locationField = document.getElementById('locationField');
+        const locationStatus = document.getElementById('locationStatus');
+        
+        if (locationField && locationStatus) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
+                        
+                        // Try to get address using reverse geocoding (OpenStreetMap Nominatim)
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const address = data.display_name || `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+                                locationField.value = address;
+                                locationStatus.innerHTML = `<i class="fas fa-map-marker-alt text-success"></i> Location: ${address.substring(0, 60)}...`;
+                            })
+                            .catch(error => {
+                                // Fallback to coordinates if reverse geocoding fails
+                                const coords = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)} (±${accuracy.toFixed(0)}m)`;
+                                locationField.value = coords;
+                                locationStatus.innerHTML = `<i class="fas fa-map-marker-alt text-success"></i> ${coords}`;
+                            });
+                    },
+                    function(error) {
+                        locationStatus.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> Location unavailable - ${error.message}`;
+                        locationField.value = 'Location not available';
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                locationStatus.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> Geolocation not supported`;
+                locationField.value = 'Geolocation not supported by browser';
+            }
+        }
+        
         // If server set a session flag to prompt for a note, show the modal
         const promptId = {% if prompt_attendance_note %}{{ prompt_attendance_note }}{% else %}null{% endif %}; 
         if (promptId) {

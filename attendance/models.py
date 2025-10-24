@@ -113,6 +113,12 @@ class Attendance(models.Model):
         blank=True,
         help_text=_("Any additional notes about this attendance record"),
     )
+    location = models.CharField(
+        _("location"),
+        max_length=500,
+        blank=True,
+        help_text=_("Location from where the user signed in (address or coordinates)"),
+    )
     created_at = models.DateTimeField(
         _("created at"),
         auto_now_add=True,

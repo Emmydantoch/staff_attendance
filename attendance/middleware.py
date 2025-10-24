@@ -11,21 +11,6 @@ class RestrictIPMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        protected_prefixes = (
-            "/sign-in-out/",
-            "/barcode-authenticate/",
-            "/barcode-scan/",
-        )
-        if any(request.path.startswith(p) for p in protected_prefixes):
-            allowed_ips = getattr(settings, "ALLOWED_SIGNIN_IPS", ["172.16.20.10"]) or [
-                "127.0.0.1",
-                "::1",
-            ]
-            xff = request.META.get("HTTP_X_FORWARDED_FOR")
-            if xff:
-                ip = xff.split(",")[0].strip()
-            else:
-                ip = request.META.get("REMOTE_ADDR")
-            if ip not in allowed_ips:
-                return HttpResponseForbidden("Sign-in/out allowed only from the office systems.")
+        # IP restriction disabled - allow sign in from any location
+        # Location is now tracked in attendance records instead
         return self.get_response(request)

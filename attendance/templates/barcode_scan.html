@@ -174,15 +174,46 @@ function submitBarcode(event) {
 }
 
 function processBarcode(barcode) {
-    showStatus('info', 'Processing...');
+    showStatus('info', 'Processing... Capturing location...');
     
+    // Capture location first
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                // Get address from coordinates
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                    .then(response => response.json())
+                    .then(geoData => {
+                        const location = geoData.display_name || `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+                        sendBarcodeAuthentication(barcode, location);
+                    })
+                    .catch(() => {
+                        const location = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+                        sendBarcodeAuthentication(barcode, location);
+                    });
+            },
+            function(error) {
+                // Location failed, send without location
+                sendBarcodeAuthentication(barcode, 'Location not available');
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+    } else {
+        sendBarcodeAuthentication(barcode, 'Geolocation not supported');
+    }
+}
+
+function sendBarcodeAuthentication(barcode, location) {
     fetch('{% url "barcode_authenticate" %}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': '{{ csrf_token }}'
         },
-        body: JSON.stringify({ barcode: barcode })
+        body: JSON.stringify({ barcode: barcode, location: location })
     })
     .then(response => response.json())
     .then(data => {

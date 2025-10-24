@@ -146,6 +146,6 @@ LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 
-ALLOWED_SIGNIN_IPS = [
-    "143.105.174.140",
-]
+# ALLOWED_SIGNIN_IPS = [
+#     "143.105.174.140",
+# ]
