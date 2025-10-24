@@ -13,16 +13,18 @@
             <th>Date</th>
             <th>Sign In</th>
             <th>Sign Out</th>
+            <th>Location</th>
             <th>Notes</th>
         </tr>
     </thead>
     <tbody>
         {% for att in attendances %}
         <tr>
-            <td>{{ att.staff }}</td>
+            <td>{{ att.user.get_full_name|default:att.user.username }}</td>
             <td>{{ att.date }}</td>
             <td>{{ att.sign_in|default:"-" }}</td>
             <td>{{ att.sign_out|default:"-" }}</td>
+            <td title="{{ att.location }}">{{ att.location|default:"-"|truncatewords:8 }}</td>
             <td>{{ att.notes|default:"-" }}</td>
         </tr>
         {% endfor %}

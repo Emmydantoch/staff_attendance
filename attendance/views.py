@@ -243,6 +243,7 @@ def export_attendance(request, format_type):
             "Date": att.date,
             "Sign In": att.sign_in,
             "Sign Out": att.sign_out,
+            "Location": att.location or "-",
             "Notes": att.notes,
         }
         for att in attendances
@@ -272,7 +273,7 @@ def export_attendance(request, format_type):
             p.drawString(
                 50,
                 y,
-                f"User: {item['User']}, Date: {item['Date']}, Sign In: {item['Sign In']}, Sign Out: {item['Sign Out']}",
+                f"User: {item['User']}, Date: {item['Date']}, Sign In: {item['Sign In']}, Sign Out: {item['Sign Out']}, Location: {item['Location'][:30]}",
             )
             y -= 20
             if y < 50:
