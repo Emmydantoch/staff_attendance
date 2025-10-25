@@ -119,7 +119,7 @@ def sign_in_out(request):
 
     # Get or create attendance record for today
     attendance, created = Attendance.objects.get_or_create(
-        user=user, date=today, defaults={"sign_in": timezone.now()}
+        user=user, date=today
     )
 
     status_message = None
@@ -384,7 +384,7 @@ def dashboard(request):
         days_taken = sum(
             [(leave.end_date - leave.start_date).days + 1 for leave in approved_leaves]
         )
-        vacation_days_total = 20
+        vacation_days_total = 5
         vacation_days_left = max(vacation_days_total - days_taken, 0)
 
         # Staff-specific data
@@ -665,7 +665,7 @@ def barcode_authenticate(request):
         # Get or create attendance for today
         today = timezone.now().date()
         attendance, created = Attendance.objects.get_or_create(
-            user=user, date=today, defaults={"sign_in": timezone.now()}
+            user=user, date=today
         )
         
         # Determine action: sign in or sign out

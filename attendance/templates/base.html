@@ -55,7 +55,11 @@
                     {% if user.is_authenticated %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'sign_in_out' %}">
-                                <i class="fas fa-sign-in-alt me-1"></i> Sign In
+                                {% if show_sign_out %}
+                                    <i class="fas fa-sign-out-alt me-1"></i> Sign Out
+                                {% else %}
+                                    <i class="fas fa-sign-in-alt me-1"></i> Sign In
+                                {% endif %}
                             </a>
                         </li>
                         <li class="nav-item">

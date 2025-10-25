@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Attendance Records</h2>
+<h2 class="text-white" style="text-align: center;">Attendance Records</h2>
 <form method="get">
     <input type="text" name="staff" placeholder="Search by staff username">
     <input type="date" name="date">
@@ -22,7 +22,17 @@
         <tr>
             <td>{{ att.user.get_full_name|default:att.user.username }}</td>
             <td>{{ att.date }}</td>
-            <td>{{ att.sign_in|default:"-" }}</td>
+            <td>
+                {% if att.sign_in %}
+                    {% if att.sign_in.hour < 9 or att.sign_in.hour == 9 and att.sign_in.minute == 0 %}
+                        <span class="text-success fw-bold">{{ att.sign_in }}</span>
+                    {% else %}
+                        <span class="text-danger fw-bold">{{ att.sign_in }}</span>
+                    {% endif %}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
             <td>{{ att.sign_out|default:"-" }}</td>
             <td title="{{ att.location }}">{{ att.location|default:"-"|truncatewords:8 }}</td>
             <td>{{ att.notes|default:"-" }}</td>
@@ -31,6 +41,6 @@
     </tbody>
 </table>
 <a href="{% url 'export_attendance' 'csv' %}" class="btn btn-secondary">Export CSV</a>
-<a href="{% url 'export_attendance' 'excel' %}" class="btn btn-secondary">Export Excel</a>
+<!-- <a href="{% url 'export_attendance' 'excel' %}" class="btn btn-secondary">Export Excel</a> -->
 <a href="{% url 'export_attendance' 'pdf' %}" class="btn btn-secondary">Export PDF</a>
 {% endblock %}
