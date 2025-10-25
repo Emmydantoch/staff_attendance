@@ -178,14 +178,28 @@
         display: flex;
         gap: 1rem;
         margin-top: 2rem;
+        flex-wrap: wrap;
     }
     
     .todo-column {
         flex: 1;
+        min-width: 280px;
         background: white;
         border-radius: 0.75rem;
         padding: 1rem;
         box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.10);
+    }
+    
+    /* Responsive Styles for Todo List */
+    @media (max-width: 992px) {
+        .todo-container {
+            flex-direction: column;
+        }
+        
+        .todo-column {
+            width: 100%;
+            min-width: 100%;
+        }
     }
     
     .todo-column-header {
@@ -356,6 +370,69 @@
     .duty-status-overdue {
         background-color: rgba(220, 53, 69, 0.1);
         color: #dc3545;
+    }
+    
+    /* General Mobile Responsive Styles */
+    @media (max-width: 768px) {
+        .welcome-content {
+            padding: 1.5rem;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+        
+        .stats-number {
+            font-size: 1.5rem;
+        }
+        
+        .stats-label {
+            font-size: 0.85rem;
+        }
+        
+        .todo-column {
+            padding: 0.75rem;
+        }
+        
+        .todo-column-title {
+            font-size: 1rem;
+        }
+        
+        .todo-item {
+            padding: 0.75rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+        
+        .btn {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .welcome-content {
+            padding: 1rem;
+        }
+        
+        .welcome-card h2 {
+            font-size: 1.5rem;
+        }
+        
+        .stats-card {
+            margin-bottom: 1rem;
+        }
+        
+        .todo-container {
+            margin-top: 1rem;
+            gap: 0.75rem;
+        }
+        
+        .card {
+            margin-bottom: 1rem;
+        }
     }
 </style>
 {% endblock %}

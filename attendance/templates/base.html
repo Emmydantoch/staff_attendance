@@ -35,6 +35,26 @@
         .card-header, .card-footer {
             background: transparent !important;
         }
+        
+        /* Responsive Footer Styles */
+        @media (max-width: 768px) {
+            footer .col-md-6 {
+                text-align: center !important;
+                margin-bottom: 1rem;
+            }
+            
+            footer h5 {
+                font-size: 1.25rem;
+            }
+            
+            footer p {
+                font-size: 0.875rem;
+            }
+            
+            .navbar-brand span {
+                font-size: 0.9rem;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
