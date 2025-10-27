@@ -54,7 +54,7 @@
                                 <input type="hidden" name="action" value="sign_in">
                                 <div class="mb-3">
                                     <small class="text-muted" id="locationStatus">
-                                        <i class="fas fa-spinner fa-spin"></i> Capturing location...
+                                        <i class="fas fa-map-marker-alt"></i> Setting location...
                                     </small>
                                 </div>
                                 <button type="submit" id="signInBtn" class="btn btn-lg btn-success px-5 py-2 shadow-sm fw-bold" disabled>
@@ -95,62 +95,12 @@ document.addEventListener('DOMContentLoaded', function(){
             }
         }
         
-        // Fallback: Enable button after 15 seconds even if location isn't captured
-        if (signInBtn) {
-            setTimeout(function() {
-                if (signInBtn.disabled) {
-                    enableSignInButton();
-                    if (locationStatus) {
-                        locationStatus.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> Location unavailable - You can still sign in`;
-                    }
-                    if (!locationField.value) {
-                        locationField.value = 'Location not captured';
-                    }
-                }
-            }, 15000);
-        }
-        
+        // Set fixed location: Kinplus opp Teaching Hospital, Ado Ekiti
         if (locationField && locationStatus) {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        const accuracy = position.coords.accuracy;
-                        
-                        // Try to get address using reverse geocoding (OpenStreetMap Nominatim)
-                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                const address = data.display_name || `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
-                                locationField.value = address;
-                                locationStatus.innerHTML = `<i class="fas fa-map-marker-alt text-success"></i> Location: ${address.substring(0, 60)}...`;
-                                enableSignInButton();
-                            })
-                            .catch(error => {
-                                // Fallback to coordinates if reverse geocoding fails
-                                const coords = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)} (±${accuracy.toFixed(0)}m)`;
-                                locationField.value = coords;
-                                locationStatus.innerHTML = `<i class="fas fa-map-marker-alt text-success"></i> ${coords}`;
-                                enableSignInButton();
-                            });
-                    },
-                    function(error) {
-                        locationStatus.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> Location unavailable - ${error.message}`;
-                        locationField.value = 'Location not available';
-                        enableSignInButton();
-                    },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
-                    }
-                );
-            } else {
-                locationStatus.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> Geolocation not supported`;
-                locationField.value = 'Geolocation not supported by browser';
-                enableSignInButton();
-            }
+            const fixedLocation = 'Kinplus opp Teaching Hospital, Ado Ekiti, Ekiti State, Nigeria';
+            locationField.value = fixedLocation;
+            locationStatus.innerHTML = `<i class="fas fa-map-marker-alt text-success"></i> Location: ${fixedLocation}`;
+            enableSignInButton();
         }
         
         // If server set a session flag to prompt for a note, show the modal

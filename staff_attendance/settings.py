@@ -52,6 +52,12 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "accounts.CustomUser"
 # AUTH_USER_MODEL = "auth.User"
 
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailOrUsernameModelBackend',  # Custom backend for email/username login
+    'django.contrib.auth.backends.ModelBackend',  # Fallback to default backend
+]
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
