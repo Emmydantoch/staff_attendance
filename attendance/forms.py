@@ -133,3 +133,84 @@ class LeaveRequestForm(forms.ModelForm):
         # Make start_date and end_date optional so 'Suggestion' requests don't require them
         self.fields["start_date"].required = False
         self.fields["end_date"].required = False
+
+
+class UserUpdateForm(forms.ModelForm):
+    """Form for updating user basic information"""
+    
+    first_name = forms.CharField(
+        max_length=30,
+        required=True,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": _("First name"),
+            }
+        ),
+    )
+    last_name = forms.CharField(
+        max_length=30,
+        required=True,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": _("Last name")}
+        ),
+    )
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(
+            attrs={"class": "form-control", "placeholder": _("Email address")}
+        ),
+    )
+    
+    class Meta:
+        model = CustomUser
+        fields = ["first_name", "last_name", "email"]
+
+
+class StaffUpdateForm(forms.ModelForm):
+    """Form for updating staff profile information"""
+    
+    phone = forms.CharField(
+        max_length=15,
+        required=False,
+        validators=[
+            RegexValidator(
+                regex=r"^\+?1?\d{9,15}$",
+                message=_(
+                    "Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
+                ),
+            )
+        ],
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": _("e.g. +1234567890"),
+            }
+        ),
+    )
+    
+    bio = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "placeholder": _("Tell us about yourself..."),
+                "rows": 3,
+            }
+        ),
+    )
+    
+    profile_picture = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(
+            attrs={
+                "class": "form-control",
+                "accept": "image/*",
+            }
+        ),
+    )
+    
+    class Meta:
+        from .models import Staff
+        model = Staff
+        fields = ["phone", "bio", "profile_picture"]

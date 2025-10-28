@@ -31,6 +31,8 @@ urlpatterns = [
         views.reject_leave_request,
         name="reject_leave_request",
     ),
+    # Profile URL
+    path("profile/", views.profile, name="profile"),
     # Barcode/QR Code URLs
     path("my-barcode/", views.my_barcode, name="my_barcode"),
     path("barcode-scan/", views.barcode_scan_page, name="barcode_scan_page"),

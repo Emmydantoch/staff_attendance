@@ -384,7 +384,7 @@ def dashboard(request):
         days_taken = sum(
             [(leave.end_date - leave.start_date).days + 1 for leave in approved_leaves]
         )
-        vacation_days_total = 5
+        vacation_days_total = 10
         vacation_days_left = max(vacation_days_total - days_taken, 0)
 
         # Staff-specific data
@@ -932,3 +932,80 @@ def get_delegated_duties(request):
     except Exception as e:
         logger.error(f"Error fetching delegated duties: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'message': 'Failed to fetch duties'}, status=500)
+
+
+@login_required
+def profile(request):
+    """User profile page showing personal information and statistics"""
+    from .models import Staff
+    from .forms import UserUpdateForm, StaffUpdateForm
+    
+    try:
+        staff = Staff.objects.get(user=request.user)
+    except Staff.DoesNotExist:
+        # Create staff profile if it doesn't exist
+        staff = Staff.objects.create(user=request.user)
+    
+    # Handle form submission
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=request.user)
+        staff_form = StaffUpdateForm(request.POST, request.FILES, instance=staff)
+        
+        if user_form.is_valid() and staff_form.is_valid():
+            user_form.save()
+            staff_form.save()
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('profile')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        user_form = UserUpdateForm(instance=request.user)
+        staff_form = StaffUpdateForm(instance=staff)
+    
+    # Get user's attendance statistics
+    today = timezone.now().date()
+    month_start = today.replace(day=1)
+    
+    # Attendance this month
+    month_attendance = Attendance.objects.filter(
+        user=request.user,
+        date__gte=month_start,
+        date__lte=today
+    )
+    
+    days_worked = month_attendance.filter(sign_in__isnull=False).count()
+    late_arrivals = month_attendance.filter(sign_in__time__gt=timezone.datetime.strptime('09:00:00', '%H:%M:%S').time()).count()
+    
+    # Calculate total hours worked this month
+    total_hours = 0
+    for att in month_attendance:
+        if att.sign_in and att.sign_out:
+            duration = att.sign_out - att.sign_in
+            total_hours += duration.total_seconds() / 3600
+    
+    # Get leave requests
+    approved_leaves = LeaveRequest.objects.filter(
+        user=request.user,
+        status='Approved'
+    )
+    days_taken = sum([(leave.end_date - leave.start_date).days + 1 for leave in approved_leaves])
+    vacation_days_total = 10
+    vacation_days_left = max(vacation_days_total - days_taken, 0)
+    
+    # Recent attendance records
+    recent_attendance = Attendance.objects.filter(user=request.user).order_by('-date')[:10]
+    
+    context = {
+        'staff': staff,
+        'user_form': user_form,
+        'staff_form': staff_form,
+        'days_worked': days_worked,
+        'late_arrivals': late_arrivals,
+        'total_hours': round(total_hours, 1),
+        'vacation_days_left': vacation_days_left,
+        'vacation_days_total': vacation_days_total,
+        'recent_attendance': recent_attendance,
+        'user': request.user,
+    }
+    
+    return render(request, 'profile.html', context)
