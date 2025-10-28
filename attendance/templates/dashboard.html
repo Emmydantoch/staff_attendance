@@ -693,34 +693,38 @@
     
     <!-- Quick Actions & Recent Requests in one row -->
     <div class="row g-4">
-        <!-- Quick Actions / Team Member Card -->
+        <!-- Quick Actions Card -->
         <div class="col-lg-6">
             <div class="card h-100">
-                <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                    <span class="badge bg-white text-primary px-3 py-2 rounded-pill">
-                        <i class="fas fa-user-shield me-1"></i>
-                        {% if is_staff %}
-                            Administrator
-                        {% elif user_role == "Intern" %}
-                            Intern
-                        {% elif user_role == "Trainee" %}
-                            Trainee
-                        {% elif user_role == "ITstudent" %}
-                            ITstudent
-                        {% else %}
-                            Team Member
-                        {% endif %}
-                    </span>
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">Quick Actions</h5>
                 </div>
-                <div class="col-md-6">
-                    <a href="{% url 'attendance_list' %}" class="btn btn-outline-info w-100 py-3 mb-2">
-                        <i class="fas fa-list-alt me-2"></i>View Attendance
-                    </a>
-                </div>
-                <div class="col-md-6">
-                    <a href="#" class="btn btn-outline-secondary w-100 py-3 mb-2">
-                        <i class="fas fa-file-export me-2"></i>Export Report
-                    </a>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="{% url 'attendance_list' %}" class="btn btn-outline-info w-100 py-3">
+                                <i class="fas fa-list-alt me-2"></i>View Attendance
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="dropdown w-100">
+                                <button class="btn btn-outline-secondary w-100 py-3 dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-file-export me-2"></i>Export Report
+                                </button>
+                                <ul class="dropdown-menu w-100" aria-labelledby="exportDropdown">
+                                    <li><a class="dropdown-item" href="{% url 'export_attendance' 'csv' %}">
+                                        <i class="fas fa-file-csv me-2"></i>Export as CSV
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'export_attendance' 'excel' %}">
+                                        <i class="fas fa-file-excel me-2"></i>Export as Excel
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'export_attendance' 'pdf' %}">
+                                        <i class="fas fa-file-pdf me-2"></i>Export as PDF
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -799,40 +803,6 @@
     {% else %}
     <!-- Employee Dashboard -->
     <div class="row g-4">
-        <!-- Welcome Card -->
-        <div class="col-12">
-            <div class="card bg-light border-0">
-                <div class="card-body p-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h3 class="h4 mb-2">Welcome to Your Dashboard</h3>
-                            <p class="text-muted mb-0">Check your attendance, request time off, and stay up to date with your schedule.</p>
-                        </div>
-                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                            <div class="d-flex flex-column">
-                                <span class="badge bg-primary bg-opacity-10 text-primary p-2 mb-2">
-                                    <i class="far fa-calendar-check me-1"></i> 
-                                    {% now "F Y" %}
-                                </span>
-                                <div class="d-flex justify-content-md-end gap-2">
-                                    <a href="{% url 'sign_in_out' %}" class="btn btn-primary">
-                                        {% if show_sign_out %}
-                                            <i class="fas fa-sign-out-alt me-1"></i> Sign Out
-                                        {% else %}
-                                            <i class="fas fa-sign-in-alt me-1"></i> Sign In
-                                        {% endif %}
-                                    </a>
-                                    <a href="{% url 'leave_request' %}" class="btn btn-outline-primary">
-                                        <i class="far fa-calendar-plus me-1"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
         <!-- Quick Stats -->
         <div class="col-md-4">
             <div class="card h-100">

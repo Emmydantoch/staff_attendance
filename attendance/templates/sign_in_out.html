@@ -58,12 +58,12 @@
                                     </small>
                                 </div>
                                 <button type="submit" id="signInBtn" class="btn btn-lg btn-success px-5 py-2 shadow-sm fw-bold" disabled>
-                                    <span id="btnText">Sign In</span>
+                                    <span id="btnText">Check In</span>
                                     <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
                                 </button>
                             {% elif show_sign_out %}
                                 <input type="hidden" name="action" value="sign_out">
-                                <button type="submit" class="btn btn-lg btn-danger px-5 py-2 shadow-sm fw-bold">Sign Out</button>
+                                <button type="submit" class="btn btn-lg btn-danger px-5 py-2 shadow-sm fw-bold">Check Out</button>
                             {% endif %}
                         </form>
                     {% else %}
