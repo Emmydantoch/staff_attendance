@@ -1,26 +1,68 @@
 {% extends 'base.html' %}
+
+{% block title %}Request Time Off - StaffTrack{% endblock %}
+
 {% block content %}
-<h2 class="text-white">Request Time Off or Remote Work</h2>
-<form method="post" class="p-4 rounded shadow-sm bg-white" style="max-width: 500px; margin: auto;">
-    {% csrf_token %}
-    <div class="mb-3">
-        <label for="id_type" class="form-label">Request Type</label>
-        {{ form.type }}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Page Header -->
+            <div class="mb-4 text-center">
+                <h2 class="text-white mb-2">
+                    <i class="fas fa-calendar-plus me-2"></i>Request Time Off or Remote Work
+                </h2>
+                <p class="text-white-50">Submit your leave request or remote work application</p>
+            </div>
+
+            <!-- Request Form Card -->
+            <div class="card shadow-lg mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>New Request</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="leaveRequestForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_type" class="form-label fw-bold">Request Type <span class="text-danger">*</span></label>
+                            {{ form.type }}
+                        </div>
+                        <div class="mb-3" id="start-date-container">
+                            <label for="id_start_date" class="form-label fw-bold">Start Date <span class="text-danger">*</span></label>
+                            {{ form.start_date }}
+                        </div>
+                        <div class="mb-3" id="end-date-container">
+                            <label for="id_end_date" class="form-label fw-bold">End Date <span class="text-danger">*</span></label>
+                            {{ form.end_date }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_reason" class="form-label fw-bold">Reason <span class="text-danger">*</span></label>
+                            {{ form.reason }}
+                            <small class="form-text text-muted">Please provide a detailed explanation for your request.</small>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="fas fa-info-circle me-2 text-info"></i>Important Information</h6>
+                    <ul class="mb-0 small text-muted">
+                        <li>Your request will be reviewed by management</li>
+                        <li>You will be notified once your request is approved or rejected</li>
+                        <li>For urgent matters, please contact your supervisor directly</li>
+                        <li>Remote work requests are subject to approval based on role requirements</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="mb-3" id="start-date-container">
-        <label for="id_start_date" class="form-label">Start Date</label>
-        {{ form.start_date }}
-    </div>
-    <div class="mb-3" id="end-date-container">
-        <label for="id_end_date" class="form-label">End Date</label>
-        {{ form.end_date }}
-    </div>
-    <div class="mb-3">
-        <label for="id_reason" class="form-label">Reason</label>
-        {{ form.reason }}
-    </div>
-    <button type="submit" class="btn btn-primary w-100">Submit Request</button>
-</form>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -29,6 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const typeSelect = document.getElementById('id_type');
     const startContainer = document.getElementById('start-date-container');
     const endContainer = document.getElementById('end-date-container');
+    const leaveForm = document.getElementById('leaveRequestForm');
 
     function toggleDateFields() {
         if (!typeSelect) return;
@@ -53,6 +96,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle whenever the type select changes
     if (typeSelect) {
         typeSelect.addEventListener('change', toggleDateFields);
+    }
+
+    // Check if there's a success message and clear form
+    const alerts = document.querySelectorAll('.alert-success');
+    if (alerts.length > 0 && leaveForm) {
+        // Clear the form after successful submission
+        leaveForm.reset();
+        // Scroll to top to see the success message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 });
 </script>

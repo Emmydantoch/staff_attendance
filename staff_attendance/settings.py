@@ -68,6 +68,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "attendance.middleware.RestrictIPMiddleware",
+    "attendance.middleware.EmailVerificationMiddleware",  # Email verification check
 ]
 
 ROOT_URLCONF = "staff_attendance.urls"
@@ -160,3 +161,19 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 # ALLOWED_SIGNIN_IPS = [
 #     "143.105.174.140",
 # ]
+
+# Email Configuration
+# For development, use console backend (prints emails to console)
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # For production, configure your email service
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@adminedge.com')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL

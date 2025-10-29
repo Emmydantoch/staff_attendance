@@ -47,4 +47,10 @@ urlpatterns = [
     # Delegated Duty URLs
     path("duties/create/", views.create_delegated_duty, name="create_delegated_duty"),
     path("duties/", views.get_delegated_duties, name="get_delegated_duties"),
+    # Admin Management URLs
+    path("admin/promote/", views.promote_to_admin, name="promote_to_admin"),
+    path("api/non-admin-users/", views.get_non_admin_users, name="get_non_admin_users"),
+    # Email Verification URLs
+    path("verify-email/<str:token>/", views.verify_email, name="verify_email"),
+    path("resend-verification/", views.resend_verification, name="resend_verification"),
 ]

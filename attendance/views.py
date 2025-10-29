@@ -44,9 +44,12 @@ logger = logging.getLogger(__name__)
 
 def register(request):
     """
-    Handle user registration with the custom user model.
+    Handle user registration with the custom user model and email verification.
     """
     from .models import Staff
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+    from django.utils.html import strip_tags
     
     if request.user.is_authenticated:
         messages.info(request, _("You are already logged in."))
@@ -59,7 +62,11 @@ def register(request):
                 # Save the user with the form data
                 user = form.save(commit=False)
                 user.set_password(form.cleaned_data["password1"])
+                user.email_verified = False  # User needs to verify email
                 user.save()
+
+                # Generate verification token
+                token = user.generate_verification_token()
 
                 # Create Staff profile for the user (if not already created by signal)
                 staff, created = Staff.objects.get_or_create(
@@ -76,26 +83,42 @@ def register(request):
                 # Log the successful registration
                 logger.info(f"New user registered: {user.username} ({user.email})")
 
-                # Authenticate and log the user in
-                user = authenticate(
-                    username=form.cleaned_data["username"],
-                    password=form.cleaned_data["password1"],
-                )
-
-                if user is not None:
-                    login(request, user)
-                    messages.success(
-                        request, _("Registration successful! You are now logged in.")
+                # Send verification email
+                try:
+                    verification_url = request.build_absolute_uri(
+                        f'/verify-email/{token}/'
                     )
-                    return redirect("dashboard")
-                else:
+                    
+                    subject = 'Verify Your Email - AdminEdge Staff Attendance'
+                    html_message = render_to_string('emails/verify_email.html', {
+                        'user': user,
+                        'verification_url': verification_url,
+                    })
+                    plain_message = strip_tags(html_message)
+                    
+                    send_mail(
+                        subject,
+                        plain_message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [user.email],
+                        html_message=html_message,
+                        fail_silently=False,
+                    )
+                    
                     messages.success(
                         request,
-                        _(
-                            "Registration successful! Please log in with your credentials."
-                        ),
+                        _("Registration successful! Please check your email to verify your account before logging in.")
                     )
-                    return redirect("login")
+                    logger.info(f"Verification email sent to {user.email}")
+                    
+                except Exception as email_error:
+                    logger.error(f"Error sending verification email: {str(email_error)}", exc_info=True)
+                    messages.warning(
+                        request,
+                        _("Registration successful, but we couldn't send the verification email. Please contact support.")
+                    )
+                
+                return redirect("login")
 
             except Exception as e:
                 logger.error(f"Error during registration: {str(e)}", exc_info=True)
@@ -294,8 +317,13 @@ def leave_request(request):
             leave = form.save(commit=False)
             leave.user = request.user
             leave.save()
-            messages.success(request, "request submitted.")
-            return redirect("sign_in_out")
+            
+            # Determine request type for better message
+            request_type = leave.get_type_display() if hasattr(leave, 'get_type_display') else leave.type
+            messages.success(request, f"✓ Your {request_type} request has been submitted successfully and is pending approval.")
+            
+            # Stay on the same page after successful submission
+            return redirect("leave_request")
     else:
         form = LeaveRequestForm()
     return render(request, "leave_request.html", {"form": form})
@@ -1009,3 +1037,196 @@ def profile(request):
     }
     
     return render(request, 'profile.html', context)
+
+
+def verify_email(request, token):
+    """
+    Verify user's email address using the verification token.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    try:
+        User = get_user_model()
+        user = User.objects.get(email_verification_token=token)
+        
+        # Check if token is expired (24 hours validity)
+        if user.email_token_created:
+            token_age = timezone.now() - user.email_token_created
+            if token_age > timedelta(hours=24):
+                messages.error(request, _("Verification link has expired. Please request a new one."))
+                return redirect('resend_verification')
+        
+        # Verify the email
+        user.email_verified = True
+        user.email_verification_token = None  # Clear the token
+        user.email_token_created = None
+        user.save()
+        
+        logger.info(f"Email verified for user: {user.username} ({user.email})")
+        messages.success(request, _("✓ Email verified successfully! You can now log in."))
+        return redirect('login')
+        
+    except User.DoesNotExist:
+        messages.error(request, _("Invalid verification link. Please try again or contact support."))
+        return redirect('login')
+    except Exception as e:
+        logger.error(f"Error verifying email: {str(e)}", exc_info=True)
+        messages.error(request, _("An error occurred during verification. Please try again."))
+        return redirect('login')
+
+
+def resend_verification(request):
+    """
+    Resend verification email to user.
+    """
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+    from django.utils.html import strip_tags
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        
+        try:
+            User = get_user_model()
+            user = User.objects.get(email=email)
+            
+            if user.email_verified:
+                messages.info(request, _("This email is already verified. You can log in."))
+                return redirect('login')
+            
+            # Generate new token
+            token = user.generate_verification_token()
+            
+            # Send verification email
+            verification_url = request.build_absolute_uri(
+                f'/verify-email/{token}/'
+            )
+            
+            subject = 'Verify Your Email - AdminEdge Staff Attendance'
+            html_message = render_to_string('emails/verify_email.html', {
+                'user': user,
+                'verification_url': verification_url,
+            })
+            plain_message = strip_tags(html_message)
+            
+            send_mail(
+                subject,
+                plain_message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            
+            messages.success(request, _("✓ Verification email sent! Please check your inbox."))
+            logger.info(f"Verification email resent to {user.email}")
+            return redirect('login')
+            
+        except User.DoesNotExist:
+            messages.error(request, _("No account found with this email address."))
+        except Exception as e:
+            logger.error(f"Error resending verification: {str(e)}", exc_info=True)
+            messages.error(request, _("Failed to send verification email. Please try again."))
+    
+    return render(request, 'resend_verification.html')
+
+
+@login_required
+@require_POST
+def promote_to_admin(request):
+    """
+    Promote a user to admin status (staff). Only accessible by existing admins.
+    """
+    if not request.user.is_staff:
+        return JsonResponse({
+            'success': False,
+            'message': 'You do not have permission to perform this action.'
+        }, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'User ID is required.'
+            }, status=400)
+        
+        User = get_user_model()
+        user = User.objects.get(id=user_id)
+        
+        if user.is_staff:
+            return JsonResponse({
+                'success': False,
+                'message': f'{user.get_full_name() or user.username} is already an admin.'
+            }, status=400)
+        
+        # Promote user to admin
+        user.is_staff = True
+        user.save()
+        
+        logger.info(f"User {user.username} promoted to admin by {request.user.username}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{user.get_full_name() or user.username} has been promoted to admin successfully!',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name() or user.username,
+                'email': user.email
+            }
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'User not found.'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error promoting user to admin: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'An error occurred while promoting the user.'
+        }, status=500)
+
+
+@login_required
+def get_non_admin_users(request):
+    """
+    Get list of all non-admin users. Only accessible by admins.
+    """
+    if not request.user.is_staff:
+        return JsonResponse({
+            'success': False,
+            'message': 'You do not have permission to perform this action.'
+        }, status=403)
+    
+    try:
+        User = get_user_model()
+        non_admin_users = User.objects.filter(is_staff=False, is_active=True).order_by('first_name', 'last_name', 'username')
+        
+        users_list = [
+            {
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name() or user.username,
+                'email': user.email,
+                'department': user.department.name if hasattr(user, 'department') and user.department else None
+            }
+            for user in non_admin_users
+        ]
+        
+        return JsonResponse({
+            'success': True,
+            'users': users_list
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching non-admin users: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'An error occurred while fetching users.'
+        }, status=500)

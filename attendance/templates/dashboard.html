@@ -439,14 +439,6 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
     <!-- Welcome Card -->
     <div class="welcome-card mb-4">
         <div class="welcome-content">
@@ -560,6 +552,28 @@
     </div>
 
         <div class="row g-4 mb-4">
+            <!-- Admin Management Section -->
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0"><i class="fas fa-user-shield me-2"></i>Admin Management</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">Promote a user to administrator role</p>
+                        <div class="mb-3">
+                            <label for="userToPromote" class="form-label">Select User</label>
+                            <select class="form-select" id="userToPromote">
+                                <option value="">Loading users...</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary w-100" onclick="promoteUserToAdmin()">
+                            <i class="fas fa-user-plus me-1"></i> Promote to Admin
+                        </button>
+                        <div id="promoteMessage" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Duty Delegation Section -->
             <div class="col-lg-8">
                 <div class="card h-100">
@@ -641,7 +655,7 @@
                 </div>
             </div>
             <!-- Recent Activity -->
-            <div class="col-lg-4 d-flex align-items-stretch">
+            <!-- <div class="col-lg-4 d-flex align-items-stretch">
                 <div class="card w-100 h-100">
                     <div class="card-header bg-white border-0">
                         <h5 class="mb-0">Recent Activity</h5>
@@ -689,46 +703,76 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
     
-    <!-- Quick Actions & Recent Requests in one row -->
-    <div class="row g-4">
-        <!-- Quick Actions Card -->
+    <!-- Admin's Own Leave Requests & Team Requests -->
+    <div class="row g-4 mb-4">
+        <!-- Admin's Personal Time Off -->
         <div class="col-lg-6">
             <div class="card h-100">
-                <div class="card-header bg-white border-0">
-                    <h5 class="mb-0">Quick Actions</h5>
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-user-clock me-2"></i>My Leave Requests</h5>
+                    <a href="{% url 'leave_request' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i>New Request
+                    </a>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <a href="{% url 'attendance_list' %}" class="btn btn-outline-info w-100 py-3">
-                                <i class="fas fa-list-alt me-2"></i>View Attendance
-                            </a>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="dropdown w-100">
-                                <button class="btn btn-outline-secondary w-100 py-3 dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-file-export me-2"></i>Export Report
-                                </button>
-                                <ul class="dropdown-menu w-100" aria-labelledby="exportDropdown">
-                                    <li><a class="dropdown-item" href="{% url 'export_attendance' 'csv' %}">
-                                        <i class="fas fa-file-csv me-2"></i>Export as CSV
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="{% url 'export_attendance' 'excel' %}">
-                                        <i class="fas fa-file-excel me-2"></i>Export as Excel
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="{% url 'export_attendance' 'pdf' %}">
-                                        <i class="fas fa-file-pdf me-2"></i>Export as PDF
-                                    </a></li>
-                                </ul>
-                            </div>
-                        </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Request Type</th>
+                                    <th>Dates</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in upcoming_time_off %}
+                                <tr>
+                                    <td>
+                                        {% if leave.type == 'Remote Work' %}
+                                            <span class="badge bg-info bg-opacity-10 text-info">
+                                                <i class="fas fa-home me-1"></i>Remote Work
+                                            </span>
+                                        {% else %}
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-umbrella-beach me-2 text-primary"></i>
+                                                {{ leave.reason|truncatewords:3 }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ leave.start_date|date:"M d, Y" }} - {{ leave.end_date|date:"M d, Y" }}</small>
+                                        <div class="text-muted small">{{ leave.days }} day{{ leave.days|pluralize }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if leave.status == 'Pending' %}bg-warning bg-opacity-10 text-warning{% endif %}
+                                            {% if leave.status == 'Approved' %}bg-success bg-opacity-10 text-success{% endif %}
+                                            {% if leave.status == 'Rejected' %}bg-danger bg-opacity-10 text-danger{% endif %}">
+                                            {{ leave.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        <i class="fas fa-calendar-day fa-2x mb-2 d-block"></i>
+                                        No upcoming leave requests
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+                <div class="card-footer bg-white border-0 text-center">
+                    <a href="{% url 'all_time_off' %}" class="text-decoration-none">View All My Requests <i class="fas fa-arrow-right ms-1"></i></a>
                 </div>
             </div>
         </div>
-        <!-- Recent  Requests Card -->
+        
+        <!-- Team Leave Requests Card -->
         <div class="col-lg-6">
             <div class="card h-100">
                 <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
@@ -1478,15 +1522,31 @@ function deleteTodo(todoId) {
 }
 
 function showToast(message, type) {
-    // Simple toast notification
+    // Create toast notification with better styling
     const toast = document.createElement('div');
-    toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
+    toast.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
     toast.style.zIndex = '9999';
-    toast.textContent = message;
+    toast.style.minWidth = '300px';
+    toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    
+    // Add icon based on type
+    let icon = '';
+    if (type === 'success') icon = '<i class="fas fa-check-circle me-2"></i>';
+    else if (type === 'danger') icon = '<i class="fas fa-exclamation-circle me-2"></i>';
+    else if (type === 'warning') icon = '<i class="fas fa-exclamation-triangle me-2"></i>';
+    else icon = '<i class="fas fa-info-circle me-2"></i>';
+    
+    toast.innerHTML = `
+        ${icon}${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
     document.body.appendChild(toast);
     
+    // Auto-remove after 3 seconds
     setTimeout(() => {
-        toast.remove();
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 150);
     }, 3000);
 }
 
@@ -1556,19 +1616,20 @@ function delegateDuty() {
             // Clear form
             document.getElementById('delegateDutyForm').reset();
             
-            showToast('Duty delegated successfully!', 'success');
+            // Show success message
+            showToast('✓ Duty delegated successfully to ' + data.duty.assigned_to + '!', 'success');
             
-            // Reload page to show new duty
+            // Reload page to show new duty (wait for toast to be visible)
             setTimeout(() => {
                 window.location.reload();
-            }, 1000);
+            }, 2500);
         } else {
-            alert('Error: ' + data.message);
+            showToast('Error: ' + data.message, 'danger');
         }
     })
     .catch(error => {
         console.error('Error delegating duty:', error);
-        alert('Failed to delegate duty. Please try again.');
+        showToast('Failed to delegate duty. Please try again.', 'danger');
     });
 }
 
@@ -1667,6 +1728,94 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('dutyDueDate').setAttribute('min', today);
         });
     }
+    
+    // Load non-admin users for promotion dropdown
+    {% if is_staff %}
+    loadNonAdminUsers();
+    {% endif %}
 });
+
+// Load non-admin users for the promotion dropdown
+function loadNonAdminUsers() {
+    fetch("{% url 'get_non_admin_users' %}")
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const select = document.getElementById('userToPromote');
+                select.innerHTML = '<option value="">-- Select a user --</option>';
+                
+                if (data.users.length === 0) {
+                    select.innerHTML = '<option value="">No users available</option>';
+                } else {
+                    data.users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = `${user.full_name} (${user.username})`;
+                        if (user.department) {
+                            option.textContent += ` - ${user.department}`;
+                        }
+                        select.appendChild(option);
+                    });
+                }
+            } else {
+                console.error('Failed to load users:', data.message);
+                const select = document.getElementById('userToPromote');
+                select.innerHTML = '<option value="">Error loading users</option>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading non-admin users:', error);
+            const select = document.getElementById('userToPromote');
+            select.innerHTML = '<option value="">Error loading users</option>';
+        });
+}
+
+// Promote user to admin
+function promoteUserToAdmin() {
+    const select = document.getElementById('userToPromote');
+    const userId = select.value;
+    const messageDiv = document.getElementById('promoteMessage');
+    
+    if (!userId) {
+        messageDiv.innerHTML = '<div class="alert alert-warning alert-dismissible fade show" role="alert">Please select a user to promote.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+        return;
+    }
+    
+    // Show loading state
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Promoting...';
+    
+    fetch("{% url 'promote_to_admin' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            user_id: userId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageDiv.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">${data.message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+            // Reload the dropdown to remove the promoted user
+            loadNonAdminUsers();
+            select.value = '';
+        } else {
+            messageDiv.innerHTML = `<div class="alert alert-danger alert-dismissible fade show" role="alert">${data.message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error promoting user:', error);
+        messageDiv.innerHTML = '<div class="alert alert-danger alert-dismissible fade show" role="alert">An error occurred. Please try again.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.innerHTML = originalText;
+    });
+}
 </script>
 {% endblock %}
