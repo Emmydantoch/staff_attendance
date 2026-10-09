@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 
+
 # List all time off requests for the current user (or all for admin)
 @login_required
 def all_time_off(request):
@@ -43,8 +44,13 @@ logger = logging.getLogger(__name__)
 
 def register(request):
     """
-    Handle user registration with the custom user model.
+    Handle user registration with the custom user model and email verification.
     """
+    from .models import Staff
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+    from django.utils.html import strip_tags
+    
     if request.user.is_authenticated:
         messages.info(request, _("You are already logged in."))
         return redirect("dashboard")
@@ -56,31 +62,63 @@ def register(request):
                 # Save the user with the form data
                 user = form.save(commit=False)
                 user.set_password(form.cleaned_data["password1"])
+                user.email_verified = False  # User needs to verify email
                 user.save()
+
+                # Generate verification token
+                token = user.generate_verification_token()
+
+                # Create Staff profile for the user (if not already created by signal)
+                staff, created = Staff.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        'department': user.department if hasattr(user, 'department') else None,
+                        'phone': user.phone if hasattr(user, 'phone') else '',
+                        'position': user.position if hasattr(user, 'position') else '',
+                        'bio': user.bio if hasattr(user, 'bio') else '',
+                        'is_active': True
+                    }
+                )
 
                 # Log the successful registration
                 logger.info(f"New user registered: {user.username} ({user.email})")
 
-                # Authenticate and log the user in
-                user = authenticate(
-                    username=form.cleaned_data["username"],
-                    password=form.cleaned_data["password1"],
-                )
-
-                if user is not None:
-                    login(request, user)
-                    messages.success(
-                        request, _("Registration successful! You are now logged in.")
+                # Send verification email
+                try:
+                    verification_url = request.build_absolute_uri(
+                        f'/verify-email/{token}/'
                     )
-                    return redirect("dashboard")
-                else:
+                    
+                    subject = 'Verify Your Email - AdminEdge Staff Attendance'
+                    html_message = render_to_string('emails/verify_email.html', {
+                        'user': user,
+                        'verification_url': verification_url,
+                    })
+                    plain_message = strip_tags(html_message)
+                    
+                    send_mail(
+                        subject,
+                        plain_message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [user.email],
+                        html_message=html_message,
+                        fail_silently=False,
+                    )
+                    
                     messages.success(
                         request,
-                        _(
-                            "Registration successful! Please log in with your credentials."
-                        ),
+                        _("Registration successful! Please check your email to verify your account before logging in.")
                     )
-                    return redirect("login")
+                    logger.info(f"Verification email sent to {user.email}")
+                    
+                except Exception as email_error:
+                    logger.error(f"Error sending verification email: {str(email_error)}", exc_info=True)
+                    messages.warning(
+                        request,
+                        _("Registration successful, but we couldn't send the verification email. Please contact support.")
+                    )
+                
+                return redirect("login")
 
             except Exception as e:
                 logger.error(f"Error during registration: {str(e)}", exc_info=True)
@@ -104,7 +142,7 @@ def sign_in_out(request):
 
     # Get or create attendance record for today
     attendance, created = Attendance.objects.get_or_create(
-        user=user, date=today, defaults={"sign_in": timezone.now()}
+        user=user, date=today
     )
 
     status_message = None
@@ -117,8 +155,12 @@ def sign_in_out(request):
         form = SignInOutForm(request.POST)
         if form.is_valid():
             action = form.cleaned_data["action"]
+            location = request.POST.get("location", "")  # Get location from form
+            
             if action == "sign_in" and not attendance.sign_in:
                 attendance.sign_in = timezone.now()
+                if location:
+                    attendance.location = location
                 attendance.save()
                 request.session["status_message"] = (
                     "You signed in successfully today. Welcome! we wish you a productive day ahead."
@@ -133,6 +175,8 @@ def sign_in_out(request):
                 request.session["status_message"] = (
                     "You signed out successfully. Goodbye!"
                 )
+                # Ask user to leave a note after signing out
+                request.session["prompt_attendance_note"] = attendance.id
                 request.session["sign_time"] = str(attendance.sign_out)
                 return redirect("sign_in_out")
             else:
@@ -147,6 +191,8 @@ def sign_in_out(request):
     if "status_message" in request.session:
         status_message = request.session.pop("status_message")
         sign_time = request.session.pop("sign_time", None)
+    # Pop the prompt flag for attendance note (if set) so template can show modal
+    prompt_attendance_note = request.session.pop("prompt_attendance_note", None)
 
     # Control which button/form to show
     if not attendance.sign_in:
@@ -167,6 +213,7 @@ def sign_in_out(request):
             "show_sign_out": show_sign_out,
             "status_message": status_message,
             "sign_time": sign_time,
+            "prompt_attendance_note": prompt_attendance_note,
         },
     )
 
@@ -186,6 +233,28 @@ def attendance_list(request):
 
 
 @login_required
+def save_attendance_note(request):
+    """AJAX endpoint to save a note for an attendance record."""
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            attendance_id = data.get("attendance_id")
+            note = data.get("note", "").strip()
+            att = Attendance.objects.get(id=attendance_id, user=request.user)
+            att.notes = note
+            att.save()
+            return JsonResponse({"status": "ok"})
+        except Attendance.DoesNotExist:
+            return JsonResponse(
+                {"status": "error", "message": "Attendance not found"}, status=404
+            )
+        except Exception as e:
+            logger.exception("Error saving attendance note")
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    return JsonResponse({"status": "error", "message": "Invalid method"}, status=405)
+
+
+@login_required
 def export_attendance(request, format_type):
     if not request.user.is_staff:
         return redirect("sign_in_out")
@@ -197,6 +266,7 @@ def export_attendance(request, format_type):
             "Date": att.date,
             "Sign In": att.sign_in,
             "Sign Out": att.sign_out,
+            "Location": att.location or "-",
             "Notes": att.notes,
         }
         for att in attendances
@@ -226,7 +296,7 @@ def export_attendance(request, format_type):
             p.drawString(
                 50,
                 y,
-                f"User: {item['User']}, Date: {item['Date']}, Sign In: {item['Sign In']}, Sign Out: {item['Sign Out']}",
+                f"User: {item['User']}, Date: {item['Date']}, Sign In: {item['Sign In']}, Sign Out: {item['Sign Out']}, Location: {item['Location'][:30]}",
             )
             y -= 20
             if y < 50:
@@ -247,8 +317,13 @@ def leave_request(request):
             leave = form.save(commit=False)
             leave.user = request.user
             leave.save()
-            messages.success(request, "Leave request submitted.")
-            return redirect("sign_in_out")
+            
+            # Determine request type for better message
+            request_type = leave.get_type_display() if hasattr(leave, 'get_type_display') else leave.type
+            messages.success(request, f"✓ Your {request_type} request has been submitted successfully and is pending approval.")
+            
+            # Stay on the same page after successful submission
+            return redirect("leave_request")
     else:
         form = LeaveRequestForm()
     return render(request, "leave_request.html", {"form": form})
@@ -337,7 +412,7 @@ def dashboard(request):
         days_taken = sum(
             [(leave.end_date - leave.start_date).days + 1 for leave in approved_leaves]
         )
-        vacation_days_total = 20
+        vacation_days_total = 10
         vacation_days_left = max(vacation_days_total - days_taken, 0)
 
         # Staff-specific data
@@ -391,6 +466,13 @@ def dashboard(request):
         if hasattr(request.user, "department") and request.user.department:
             department = request.user.department.name
 
+        # Delegated duties
+        from .models import DelegatedDuty
+        my_duties = DelegatedDuty.objects.filter(assigned_to=request.user).order_by("status", "due_date", "-created_at")[:10]
+        delegated_duties_admin = []
+        if request.user.is_staff:
+            delegated_duties_admin = DelegatedDuty.objects.select_related("assigned_to", "assigned_by").order_by("status", "due_date", "-created_at")[:10]
+
         context = {
             "user": request.user,
             "is_staff": request.user.is_staff,
@@ -406,6 +488,7 @@ def dashboard(request):
             "vacation_days_total": vacation_days_total,
             "user_role": user_role,
             "department": department,
+            "my_duties": my_duties,
         }
         if request.user.is_staff:
             context.update(
@@ -416,6 +499,7 @@ def dashboard(request):
                     "pending_leaves": pending_leaves,
                     "active_employees": active_employees,
                     "on_time_percent": on_time_percent,
+                    "delegated_duties": delegated_duties_admin,
                 }
             )
         return render(request, "dashboard.html", context)
@@ -427,27 +511,107 @@ def dashboard(request):
 
 @login_required
 def attendance_chart_data(request):
-    """Return JSON with labels and data for the last 7 days late arrivals (admin only)."""
+    """Return JSON with labels and data for attendance based on time range (admin only)."""
     if not request.user.is_staff:
         return JsonResponse({"error": "forbidden"}, status=403)
 
     try:
+        time_range = request.GET.get('range', 'this_week')
         today = timezone.now().date()
-        end_date = today
-        start_date = end_date - timedelta(days=6)
-        date_range = [start_date + timedelta(days=x) for x in range(7)]
-        labels = [d.strftime("%Y-%m-%d") for d in date_range]
-        late_threshold = (
-            timezone.now().replace(hour=9, minute=0, second=0, microsecond=0).time()
-        )
-        data = [
+        late_threshold = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0).time()
+        
+        # Calculate date range based on selection
+        if time_range == 'this_week':
+            # Current week (last 7 days)
+            end_date = today
+            start_date = end_date - timedelta(days=6)
+            date_range = [start_date + timedelta(days=x) for x in range(7)]
+            labels = [d.strftime("%a, %b %d") for d in date_range]
+            
+        elif time_range == 'last_week':
+            # Previous 7 days
+            end_date = today - timedelta(days=7)
+            start_date = end_date - timedelta(days=6)
+            date_range = [start_date + timedelta(days=x) for x in range(7)]
+            labels = [d.strftime("%a, %b %d") for d in date_range]
+            
+        elif time_range == 'this_month':
+            # Current month
+            start_date = today.replace(day=1)
+            end_date = today
+            days_in_range = (end_date - start_date).days + 1
+            date_range = [start_date + timedelta(days=x) for x in range(days_in_range)]
+            labels = [d.strftime("%b %d") for d in date_range]
+            
+        elif time_range == 'last_month':
+            # Previous month
+            first_day_this_month = today.replace(day=1)
+            last_day_last_month = first_day_this_month - timedelta(days=1)
+            start_date = last_day_last_month.replace(day=1)
+            end_date = last_day_last_month
+            days_in_range = (end_date - start_date).days + 1
+            date_range = [start_date + timedelta(days=x) for x in range(days_in_range)]
+            labels = [d.strftime("%b %d") for d in date_range]
+        else:
+            # Default to this week
+            end_date = today
+            start_date = end_date - timedelta(days=6)
+            date_range = [start_date + timedelta(days=x) for x in range(7)]
+            labels = [d.strftime("%a, %b %d") for d in date_range]
+        
+        # Get late arrivals count for each date
+        late_data = [
             Attendance.objects.filter(date=d, sign_in__time__gt=late_threshold).count()
             for d in date_range
         ]
-        return JsonResponse({"labels": labels, "data": data})
+        
+        # Get total attendance count for each date
+        total_data = [
+            Attendance.objects.filter(date=d, sign_in__isnull=False).count()
+            for d in date_range
+        ]
+        
+        # Get on-time arrivals count for each date
+        on_time_data = [
+            Attendance.objects.filter(date=d, sign_in__isnull=False, sign_in__time__lte=late_threshold).count()
+            for d in date_range
+        ]
+        
+        return JsonResponse({
+            "labels": labels,
+            "late_data": late_data,
+            "total_data": total_data,
+            "on_time_data": on_time_data,
+            "range": time_range
+        })
     except Exception as e:
         logger.error(f"Error generating chart data: {e}", exc_info=True)
         return JsonResponse({"error": "internal"}, status=500)
+
+
+@login_required
+def get_staff_members(request):
+    """Return JSON list of active staff members (admin only)."""
+    if not request.user.is_staff:
+        return JsonResponse({"success": False, "message": "forbidden"}, status=403)
+
+    try:
+        from .models import Staff
+
+        staff_qs = Staff.objects.select_related("user").filter(is_active=True).order_by(
+            "user__first_name", "user__last_name"
+        )
+        members = [
+            {
+                "id": s.user.id,
+                "name": (s.user.get_full_name() or s.user.username),
+            }
+            for s in staff_qs
+        ]
+        return JsonResponse({"success": True, "members": members})
+    except Exception as e:
+        logger.error(f"Error fetching staff members: {e}", exc_info=True)
+        return JsonResponse({"success": False, "message": "internal"}, status=500)
 
 
 # Create your views here.
@@ -482,3 +646,587 @@ def reject_leave_request(request, leave_id):
         f"Leave request for {leave.user.get_full_name() or leave.user.username} rejected.",
     )
     return redirect("dashboard")
+
+
+# Barcode/QR Code Views
+@login_required
+def my_barcode(request):
+    """Display the user's barcode/QR code for scanning"""
+    from .models import Staff
+    try:
+        staff = Staff.objects.get(user=request.user)
+        return render(request, "my_barcode.html", {"staff": staff})
+    except Staff.DoesNotExist:
+        messages.error(request, "Staff profile not found. Please contact admin.")
+        return redirect("dashboard")
+
+
+def barcode_scan_page(request):
+    """Page for scanning barcodes to sign in/out"""
+    return render(request, "barcode_scan.html")
+
+
+@require_POST
+def barcode_authenticate(request):
+    """Authenticate user via barcode and perform sign in/out"""
+    from .models import Staff
+    
+    try:
+        data = json.loads(request.body)
+        barcode = data.get("barcode", "").strip()
+        location = data.get("location", "").strip()
+        
+        if not barcode:
+            return JsonResponse({"success": False, "message": "No barcode provided"}, status=400)
+        
+        # Find staff by barcode
+        try:
+            staff = Staff.objects.get(barcode=barcode)
+            user = staff.user
+        except Staff.DoesNotExist:
+            return JsonResponse({"success": False, "message": "Invalid barcode"}, status=404)
+        
+        # Check if user is active
+        if not staff.is_active:
+            return JsonResponse({"success": False, "message": "Staff account is inactive"}, status=403)
+        
+        # Get or create attendance for today
+        today = timezone.now().date()
+        attendance, created = Attendance.objects.get_or_create(
+            user=user, date=today
+        )
+        
+        # Determine action: sign in or sign out
+        if not attendance.sign_in:
+            attendance.sign_in = timezone.now()
+            if location:
+                attendance.location = location
+            attendance.save()
+            return JsonResponse({
+                "success": True,
+                "action": "sign_in",
+                "message": f"Welcome {user.get_full_name() or user.username}! You signed in successfully.",
+                "time": timezone.localtime(attendance.sign_in).strftime("%H:%M:%S"),
+                "user": user.get_full_name() or user.username
+            })
+        elif attendance.sign_in and not attendance.sign_out:
+            attendance.sign_out = timezone.now()
+            attendance.save()
+            return JsonResponse({
+                "success": True,
+                "action": "sign_out",
+                "message": f"Goodbye {user.get_full_name() or user.username}! You signed out successfully.",
+                "time": timezone.localtime(attendance.sign_out).strftime("%H:%M:%S"),
+                "user": user.get_full_name() or user.username
+            })
+        else:
+            return JsonResponse({
+                "success": False,
+                "message": "You have already completed sign in/out for today."
+            })
+            
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "message": "Invalid request data"}, status=400)
+    except Exception as e:
+        logger.error(f"Error in barcode authentication: {str(e)}", exc_info=True)
+        return JsonResponse({"success": False, "message": "An error occurred"}, status=500)
+
+
+# Todo List Views
+@login_required
+def get_todos(request):
+    """Get all todo items for the current user, grouped by status"""
+    from .models import TodoItem
+    
+    try:
+        todos = TodoItem.objects.filter(user=request.user).order_by('-created_at')
+        
+        todo_list = {
+            'TODO': [],
+            'ONGOING': [],
+            'DONE': []
+        }
+        
+        for todo in todos:
+            todo_data = {
+                'id': todo.id,
+                'title': todo.title,
+                'description': todo.description,
+                'status': todo.status,
+                'created_at': todo.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'started_at': todo.started_at.strftime('%Y-%m-%d %H:%M:%S') if todo.started_at else None,
+                'completed_at': todo.completed_at.strftime('%Y-%m-%d %H:%M:%S') if todo.completed_at else None,
+            }
+            todo_list[todo.status].append(todo_data)
+        
+        return JsonResponse({'success': True, 'todos': todo_list})
+    except Exception as e:
+        logger.error(f"Error fetching todos: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to fetch todos'}, status=500)
+
+
+@login_required
+@require_POST
+def create_todo(request):
+    """Create a new todo item"""
+    from .models import TodoItem
+    
+    try:
+        data = json.loads(request.body)
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+        
+        if not title:
+            return JsonResponse({'success': False, 'message': 'Title is required'}, status=400)
+        
+        todo = TodoItem.objects.create(
+            user=request.user,
+            title=title,
+            description=description,
+            status='TODO'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Todo item created successfully',
+            'todo': {
+                'id': todo.id,
+                'title': todo.title,
+                'description': todo.description,
+                'status': todo.status,
+                'created_at': todo.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'started_at': None,
+                'completed_at': None,
+            }
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error creating todo: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to create todo'}, status=500)
+
+
+@login_required
+@require_POST
+def update_todo_status(request, todo_id):
+    """Update the status of a todo item"""
+    from .models import TodoItem
+    
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status', '').strip()
+        
+        if new_status not in ['TODO', 'ONGOING', 'DONE']:
+            return JsonResponse({'success': False, 'message': 'Invalid status'}, status=400)
+        
+        todo = TodoItem.objects.get(id=todo_id, user=request.user)
+        old_status = todo.status
+        
+        # Update status and timestamps
+        todo.status = new_status
+        
+        if new_status == 'ONGOING' and old_status == 'TODO':
+            todo.started_at = timezone.now()
+        elif new_status == 'DONE':
+            todo.completed_at = timezone.now()
+            if not todo.started_at:
+                todo.started_at = timezone.now()
+        
+        todo.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Todo status updated successfully',
+            'todo': {
+                'id': todo.id,
+                'title': todo.title,
+                'description': todo.description,
+                'status': todo.status,
+                'created_at': todo.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'started_at': todo.started_at.strftime('%Y-%m-%d %H:%M:%S') if todo.started_at else None,
+                'completed_at': todo.completed_at.strftime('%Y-%m-%d %H:%M:%S') if todo.completed_at else None,
+            }
+        })
+    except TodoItem.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Todo item not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error updating todo status: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to update todo status'}, status=500)
+
+
+@login_required
+@require_POST
+def delete_todo(request, todo_id):
+    """Delete a todo item"""
+    from .models import TodoItem
+    
+    try:
+        todo = TodoItem.objects.get(id=todo_id, user=request.user)
+        todo.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Todo item deleted successfully'
+        })
+    except TodoItem.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Todo item not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error deleting todo: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to delete todo'}, status=500)
+
+
+# Delegated Duty Views
+@login_required
+@require_POST
+def create_delegated_duty(request):
+    """Create a new delegated duty (admin only)"""
+    from .models import DelegatedDuty
+    
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        assigned_to_id = data.get('assigned_to_id')
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+        priority = data.get('priority', 'LOW').upper()
+        due_date = data.get('due_date')
+        
+        if not all([assigned_to_id, title, description]):
+            return JsonResponse({'success': False, 'message': 'Missing required fields'}, status=400)
+        
+        # Get assigned user
+        User = get_user_model()
+        try:
+            assigned_to = User.objects.get(id=assigned_to_id)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'User not found'}, status=404)
+        
+        # Create duty
+        duty = DelegatedDuty.objects.create(
+            assigned_by=request.user,
+            assigned_to=assigned_to,
+            title=title,
+            description=description,
+            priority=priority,
+            due_date=due_date if due_date else None,
+            status='Pending'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Duty delegated successfully',
+            'duty': {
+                'id': duty.id,
+                'title': duty.title,
+                'assigned_to': duty.assigned_to.get_full_name() or duty.assigned_to.username,
+                'priority': duty.priority,
+                'due_date': duty.due_date.strftime('%Y-%m-%d') if duty.due_date else None,
+                'status': duty.status
+            }
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error creating delegated duty: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to create duty'}, status=500)
+
+
+@login_required
+def get_delegated_duties(request):
+    """Get delegated duties for current user"""
+    from .models import DelegatedDuty
+    
+    try:
+        duties = DelegatedDuty.objects.filter(assigned_to=request.user).select_related('assigned_by').order_by('status', 'due_date', '-created_at')
+        
+        duty_list = []
+        for duty in duties:
+            duty_list.append({
+                'id': duty.id,
+                'title': duty.title,
+                'description': duty.description,
+                'priority': duty.priority,
+                'due_date': duty.due_date.strftime('%Y-%m-%d') if duty.due_date else None,
+                'status': duty.status,
+                'assigned_by': duty.assigned_by.get_full_name() or duty.assigned_by.username if duty.assigned_by else 'Unknown',
+                'created_at': duty.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        
+        return JsonResponse({'success': True, 'duties': duty_list})
+    except Exception as e:
+        logger.error(f"Error fetching delegated duties: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Failed to fetch duties'}, status=500)
+
+
+@login_required
+def profile(request):
+    """User profile page showing personal information and statistics"""
+    from .models import Staff
+    from .forms import UserUpdateForm, StaffUpdateForm
+    
+    try:
+        staff = Staff.objects.get(user=request.user)
+    except Staff.DoesNotExist:
+        # Create staff profile if it doesn't exist
+        staff = Staff.objects.create(user=request.user)
+    
+    # Handle form submission
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=request.user)
+        staff_form = StaffUpdateForm(request.POST, request.FILES, instance=staff)
+        
+        if user_form.is_valid() and staff_form.is_valid():
+            user_form.save()
+            staff_form.save()
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('profile')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        user_form = UserUpdateForm(instance=request.user)
+        staff_form = StaffUpdateForm(instance=staff)
+    
+    # Get user's attendance statistics
+    today = timezone.now().date()
+    month_start = today.replace(day=1)
+    
+    # Attendance this month
+    month_attendance = Attendance.objects.filter(
+        user=request.user,
+        date__gte=month_start,
+        date__lte=today
+    )
+    
+    days_worked = month_attendance.filter(sign_in__isnull=False).count()
+    late_arrivals = month_attendance.filter(sign_in__time__gt=timezone.datetime.strptime('09:00:00', '%H:%M:%S').time()).count()
+    
+    # Calculate total hours worked this month
+    total_hours = 0
+    for att in month_attendance:
+        if att.sign_in and att.sign_out:
+            duration = att.sign_out - att.sign_in
+            total_hours += duration.total_seconds() / 3600
+    
+    # Get leave requests
+    approved_leaves = LeaveRequest.objects.filter(
+        user=request.user,
+        status='Approved'
+    )
+    days_taken = sum([(leave.end_date - leave.start_date).days + 1 for leave in approved_leaves])
+    vacation_days_total = 10
+    vacation_days_left = max(vacation_days_total - days_taken, 0)
+    
+    # Recent attendance records
+    recent_attendance = Attendance.objects.filter(user=request.user).order_by('-date')[:10]
+    
+    context = {
+        'staff': staff,
+        'user_form': user_form,
+        'staff_form': staff_form,
+        'days_worked': days_worked,
+        'late_arrivals': late_arrivals,
+        'total_hours': round(total_hours, 1),
+        'vacation_days_left': vacation_days_left,
+        'vacation_days_total': vacation_days_total,
+        'recent_attendance': recent_attendance,
+        'user': request.user,
+    }
+    
+    return render(request, 'profile.html', context)
+
+
+def verify_email(request, token):
+    """
+    Verify user's email address using the verification token.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    try:
+        User = get_user_model()
+        user = User.objects.get(email_verification_token=token)
+        
+        # Check if token is expired (24 hours validity)
+        if user.email_token_created:
+            token_age = timezone.now() - user.email_token_created
+            if token_age > timedelta(hours=24):
+                messages.error(request, _("Verification link has expired. Please request a new one."))
+                return redirect('resend_verification')
+        
+        # Verify the email
+        user.email_verified = True
+        user.email_verification_token = None  # Clear the token
+        user.email_token_created = None
+        user.save()
+        
+        logger.info(f"Email verified for user: {user.username} ({user.email})")
+        messages.success(request, _("✓ Email verified successfully! You can now log in."))
+        return redirect('login')
+        
+    except User.DoesNotExist:
+        messages.error(request, _("Invalid verification link. Please try again or contact support."))
+        return redirect('login')
+    except Exception as e:
+        logger.error(f"Error verifying email: {str(e)}", exc_info=True)
+        messages.error(request, _("An error occurred during verification. Please try again."))
+        return redirect('login')
+
+
+def resend_verification(request):
+    """
+    Resend verification email to user.
+    """
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+    from django.utils.html import strip_tags
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        
+        try:
+            User = get_user_model()
+            user = User.objects.get(email=email)
+            
+            if user.email_verified:
+                messages.info(request, _("This email is already verified. You can log in."))
+                return redirect('login')
+            
+            # Generate new token
+            token = user.generate_verification_token()
+            
+            # Send verification email
+            verification_url = request.build_absolute_uri(
+                f'/verify-email/{token}/'
+            )
+            
+            subject = 'Verify Your Email - AdminEdge Staff Attendance'
+            html_message = render_to_string('emails/verify_email.html', {
+                'user': user,
+                'verification_url': verification_url,
+            })
+            plain_message = strip_tags(html_message)
+            
+            send_mail(
+                subject,
+                plain_message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            
+            messages.success(request, _("✓ Verification email sent! Please check your inbox."))
+            logger.info(f"Verification email resent to {user.email}")
+            return redirect('login')
+            
+        except User.DoesNotExist:
+            messages.error(request, _("No account found with this email address."))
+        except Exception as e:
+            logger.error(f"Error resending verification: {str(e)}", exc_info=True)
+            messages.error(request, _("Failed to send verification email. Please try again."))
+    
+    return render(request, 'resend_verification.html')
+
+
+@login_required
+@require_POST
+def promote_to_admin(request):
+    """
+    Promote a user to admin status (staff). Only accessible by existing admins.
+    """
+    if not request.user.is_staff:
+        return JsonResponse({
+            'success': False,
+            'message': 'You do not have permission to perform this action.'
+        }, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'User ID is required.'
+            }, status=400)
+        
+        User = get_user_model()
+        user = User.objects.get(id=user_id)
+        
+        if user.is_staff:
+            return JsonResponse({
+                'success': False,
+                'message': f'{user.get_full_name() or user.username} is already an admin.'
+            }, status=400)
+        
+        # Promote user to admin
+        user.is_staff = True
+        user.save()
+        
+        logger.info(f"User {user.username} promoted to admin by {request.user.username}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{user.get_full_name() or user.username} has been promoted to admin successfully!',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name() or user.username,
+                'email': user.email
+            }
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'User not found.'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error promoting user to admin: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'An error occurred while promoting the user.'
+        }, status=500)
+
+
+@login_required
+def get_non_admin_users(request):
+    """
+    Get list of all non-admin users. Only accessible by admins.
+    """
+    if not request.user.is_staff:
+        return JsonResponse({
+            'success': False,
+            'message': 'You do not have permission to perform this action.'
+        }, status=403)
+    
+    try:
+        User = get_user_model()
+        non_admin_users = User.objects.filter(is_staff=False, is_active=True).order_by('first_name', 'last_name', 'username')
+        
+        users_list = [
+            {
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name() or user.username,
+                'email': user.email,
+                'department': user.department.name if hasattr(user, 'department') and user.department else None
+            }
+            for user in non_admin_users
+        ]
+        
+        return JsonResponse({
+            'success': True,
+            'users': users_list
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching non-admin users: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'An error occurred while fetching users.'
+        }, status=500)

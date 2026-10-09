@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,11 +24,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-wm@00t9&e#5u&_@&_-2wxc-q20#uv@bwe%i*w0!sp!3@a484gp"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True") == "True"
+
 ALLOWED_HOSTS = [
-    "staff-attendance-etqs.onrender.com",
     "localhost",
     "127.0.0.1",
+    "172.16.20.10",
+    ".pythonanywhere.com",  # Allow all PythonAnywhere subdomains
 ]
 
 
@@ -51,6 +52,12 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "accounts.CustomUser"
 # AUTH_USER_MODEL = "auth.User"
 
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailOrUsernameModelBackend',  # Custom backend for email/username login
+    'django.contrib.auth.backends.ModelBackend',  # Fallback to default backend
+]
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -61,6 +68,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "attendance.middleware.RestrictIPMiddleware",
+    "attendance.middleware.EmailVerificationMiddleware",  # Email verification check
 ]
 
 ROOT_URLCONF = "staff_attendance.urls"
@@ -75,6 +83,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "attendance.context_processors.attendance_status",
             ],
         },
     },
@@ -83,29 +92,15 @@ TEMPLATES = [
 WSGI_APPLICATION = "staff_attendance.wsgi.application"
 
 
-import dj_database_url
-
-# DATABASES = {
-#     "default": dj_database_url.parse("postgresql://myapp_db_uckm_user:X3zRxCVYN98FVeVisknYOr1oVCix3qIB@dpg-d3j6thm3jp1c73f165j0-a/myapp_db_uckm", conn_max_age=600, ssl_require=True)
-# }
-
-
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-DATABASE_URL = os.environ.get("postgresql://myapp_db_uckm_user:X3zRxCVYN98FVeVisknYOr1oVCix3qIB@dpg-d3j6thm3jp1c73f165j0-a/myapp_db_uckmL")
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL, conn_max_age=600, ssl_require=True
-        )
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -133,7 +128,7 @@ LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "Africa/Lagos"
 
-USE_I18N = True
+# USE_I18N = True
 
 USE_TZ = True
 
@@ -149,6 +144,10 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]  # for development
 # WhiteNoise configuration for serving static files
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+# Media files (User uploaded content)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -159,5 +158,22 @@ LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 
+# ALLOWED_SIGNIN_IPS = [
+#     "143.105.174.140",
+# ]
 
+# Email Configuration
+# For development, use console backend (prints emails to console)
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # For production, configure your email service
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@adminedge.com')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL

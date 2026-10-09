@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Resend Verification Email - StaffTrack{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="fas fa-envelope-open-text fa-4x text-primary"></i>
+                        </div>
+                        <h2 class="h4 mb-3">Verify Your Email</h2>
+                        <p class="text-muted">Enter your email address to receive a new verification link</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input 
+                                type="email" 
+                                class="form-control form-control-lg" 
+                                id="email" 
+                                name="email" 
+                                placeholder="your.email@example.com"
+                                required
+                                autofocus
+                            >
+                            <small class="form-text text-muted">
+                                We'll send you a verification link to this email
+                            </small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>Send Verification Email
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <p class="mb-2">Already verified?</p>
+                        <a href="{% url 'login' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </a>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6 class="mb-2"><i class="fas fa-info-circle me-2 text-info"></i>Troubleshooting</h6>
+                        <ul class="small mb-0 text-muted">
+                            <li>Check your spam/junk folder</li>
+                            <li>Verification links expire after 24 hours</li>
+                            <li>Make sure you're using the correct email address</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <p class="text-white-50">
+                    Need help? <a href="#" class="text-white">Contact Support</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

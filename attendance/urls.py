@@ -11,6 +11,9 @@ urlpatterns = [
         "export/<str:format_type>/", views.export_attendance, name="export_attendance"
     ),
     path("leave-request/", views.leave_request, name="leave_request"),
+    path(
+        "attendance/save-note/", views.save_attendance_note, name="save_attendance_note"
+    ),
     path("dashboard/", views.dashboard, name="dashboard"),
     path(
         "dashboard/chart-data/",
@@ -28,4 +31,26 @@ urlpatterns = [
         views.reject_leave_request,
         name="reject_leave_request",
     ),
+    # Profile URL
+    path("profile/", views.profile, name="profile"),
+    # Barcode/QR Code URLs
+    path("my-barcode/", views.my_barcode, name="my_barcode"),
+    path("barcode-scan/", views.barcode_scan_page, name="barcode_scan_page"),
+    path("barcode-authenticate/", views.barcode_authenticate, name="barcode_authenticate"),
+    # Todo List URLs
+    path("todos/", views.get_todos, name="get_todos"),
+    path("todos/create/", views.create_todo, name="create_todo"),
+    path("todos/<int:todo_id>/update-status/", views.update_todo_status, name="update_todo_status"),
+    path("todos/<int:todo_id>/delete/", views.delete_todo, name="delete_todo"),
+    # Staff API
+    path("api/staff-members/", views.get_staff_members, name="get_staff_members"),
+    # Delegated Duty URLs
+    path("duties/create/", views.create_delegated_duty, name="create_delegated_duty"),
+    path("duties/", views.get_delegated_duties, name="get_delegated_duties"),
+    # Admin Management URLs
+    path("admin/promote/", views.promote_to_admin, name="promote_to_admin"),
+    path("api/non-admin-users/", views.get_non_admin_users, name="get_non_admin_users"),
+    # Email Verification URLs
+    path("verify-email/<str:token>/", views.verify_email, name="verify_email"),
+    path("resend-verification/", views.resend_verification, name="resend_verification"),
 ]

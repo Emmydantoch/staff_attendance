@@ -5,7 +5,7 @@
         <div class="col-md-7 col-lg-6">
             <div class="card shadow-lg border-0 rounded-4">
                 <div class="card-header text-center p-4" style="background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%); border-top-left-radius: 1rem; border-top-right-radius: 1rem;">
-                    <h2 class="mb-0 fw-bold" style="color: #ffe066; text-shadow: 0 2px 8px rgba(24,90,157,0.18);">Sign In / Sign Out</h2>
+                    <h2 class="mb-0 fw-bold" style="color: #ffe066; text-shadow: 0 2px 8px rgba(24,90,157,0.18);">AWESOME</h2>
                 </div>
                 <div class="card-body p-4">
                     {% if status_message %}
@@ -47,14 +47,23 @@
                     </div>
 
                     {% if show_form %}
-                        <form method="post" class="text-center">
+                        <form method="post" class="text-center" id="attendanceForm">
                             {% csrf_token %}
+                            <input type="hidden" name="location" id="locationField" value="">
                             {% if show_sign_in %}
                                 <input type="hidden" name="action" value="sign_in">
-                                <button type="submit" class="btn btn-lg btn-success px-5 py-2 shadow-sm fw-bold">Sign In</button>
+                                <div class="mb-3">
+                                    <small class="text-muted" id="locationStatus">
+                                        <i class="fas fa-map-marker-alt"></i> Setting location...
+                                    </small>
+                                </div>
+                                <button type="submit" id="signInBtn" class="btn btn-lg btn-success px-5 py-2 shadow-sm fw-bold" disabled>
+                                    <span id="btnText">Check In</span>
+                                    <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+                                </button>
                             {% elif show_sign_out %}
                                 <input type="hidden" name="action" value="sign_out">
-                                <button type="submit" class="btn btn-lg btn-danger px-5 py-2 shadow-sm fw-bold">Sign Out</button>
+                                <button type="submit" class="btn btn-lg btn-danger px-5 py-2 shadow-sm fw-bold">Check Out</button>
                             {% endif %}
                         </form>
                     {% else %}
@@ -65,4 +74,75 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+        // Capture location on page load for sign in
+        const locationField = document.getElementById('locationField');
+        const locationStatus = document.getElementById('locationStatus');
+        const signInBtn = document.getElementById('signInBtn');
+        const btnSpinner = document.getElementById('btnSpinner');
+        
+        // Function to enable the sign-in button
+        function enableSignInButton() {
+            if (signInBtn) {
+                signInBtn.disabled = false;
+                if (btnSpinner) {
+                    btnSpinner.style.display = 'none';
+                }
+            }
+        }
+        
+        // Set fixed location: Kinplus opp Teaching Hospital, Ado Ekiti
+        if (locationField && locationStatus) {
+            const fixedLocation = 'Kinplus opp Teaching Hospital, Ado Ekiti, Ekiti State, Nigeria';
+            locationField.value = fixedLocation;
+            locationStatus.innerHTML = `<i class="fas fa-map-marker-alt text-success"></i> Location: ${fixedLocation}`;
+            enableSignInButton();
+        }
+        
+        // If server set a session flag to prompt for a note, show the modal
+        const promptId = {% if prompt_attendance_note %}{{ prompt_attendance_note }}{% else %}null{% endif %}; 
+        if (promptId) {
+                // show modal to leave a note
+                const modalHtml = `
+                <div class="modal fade" id="attendanceNoteModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Leave a note for your sign out</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <textarea id="attendanceNoteText" class="form-control" rows="4" placeholder="Would you like to leave a message..."></textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Skip</button>
+                                <button type="button" class="btn btn-primary" id="attendanceNoteSave">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                const attendanceNoteModal = new bootstrap.Modal(document.getElementById('attendanceNoteModal'));
+                attendanceNoteModal.show();
+
+                document.getElementById('attendanceNoteSave').addEventListener('click', function(){
+                        const note = document.getElementById('attendanceNoteText').value;
+                        fetch('{% url "save_attendance_note" %}', {
+                                method: 'POST',
+                                headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': '{{ csrf_token }}'
+                                },
+                                body: JSON.stringify({attendance_id: promptId, note: note})
+                        }).then(r => r.json()).then(data => {
+                                attendanceNoteModal.hide();
+                        }).catch(err => { attendanceNoteModal.hide(); });
+                });
+        }
+});
+</script>
 {% endblock %}

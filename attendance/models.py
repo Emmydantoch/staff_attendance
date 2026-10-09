@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
+import uuid
 
 
 class Department(models.Model):
@@ -64,6 +65,20 @@ class Staff(models.Model):
         null=True,
         help_text="Upload a profile picture (optional)",
     )
+    
+    # Barcode for authentication
+    barcode = models.CharField(
+        max_length=100,
+        unique=True,
+        blank=True,
+        help_text="Unique barcode/QR code for staff authentication"
+    )
+
+    def save(self, *args, **kwargs):
+        # Generate unique barcode if not exists
+        if not self.barcode:
+            self.barcode = f"STAFF-{uuid.uuid4().hex[:12].upper()}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
@@ -97,6 +112,12 @@ class Attendance(models.Model):
         _("notes"),
         blank=True,
         help_text=_("Any additional notes about this attendance record"),
+    )
+    location = models.CharField(
+        _("location"),
+        max_length=500,
+        blank=True,
+        help_text=_("Location from where the user signed in (address or coordinates)"),
     )
     created_at = models.DateTimeField(
         _("created at"),
@@ -146,7 +167,7 @@ class LeaveRequest(models.Model):
 
     REQUEST_TYPE_CHOICES = [
         ("Leave", _("Leave")),
-        ("Suggestion", _("Suggestion")),
+        ("Suggestion_box", _("Suggestion_box")),
         ("Remote Work", _("Remote Work")),
     ]
     STATUS_CHOICES = [
@@ -170,8 +191,12 @@ class LeaveRequest(models.Model):
         default="Leave",
         help_text=_("Type of request: Leave or Remote Work"),
     )
-    start_date = models.DateField(_("start date"), help_text=_("First day of leave"))
-    end_date = models.DateField(_("end date"), help_text=_("Last day of leave"))
+    start_date = models.DateField(
+        _("start date"), help_text=_("First day of leave"), null=True, blank=True
+    )
+    end_date = models.DateField(
+        _("end date"), help_text=_("Last day of leave"), null=True, blank=True
+    )
     reason = models.TextField(_("reason"), help_text=_("Reason for leave"))
     status = models.CharField(
         _("status"),
@@ -230,4 +255,146 @@ class LeaveRequest(models.Model):
         return self.status == "Pending"
 
 
+class TodoItem(models.Model):
+    """
+    Model to track todo items for users with status tracking and dates.
+    """
+    
+    STATUS_CHOICES = [
+        ("TODO", _("To Do")),
+        ("ONGOING", _("Ongoing")),
+        ("DONE", _("Done")),
+    ]
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="todo_items",
+        verbose_name=_("user"),
+        help_text=_("User who created this todo item"),
+    )
+    title = models.CharField(
+        _("title"),
+        max_length=255,
+        help_text=_("Title of the todo item"),
+    )
+    description = models.TextField(
+        _("description"),
+        blank=True,
+        help_text=_("Optional description of the todo item"),
+    )
+    status = models.CharField(
+        _("status"),
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="TODO",
+        help_text=_("Current status of the todo item"),
+    )
+    created_at = models.DateTimeField(
+        _("created at"),
+        auto_now_add=True,
+        help_text=_("When this todo item was created"),
+    )
+    started_at = models.DateTimeField(
+        _("started at"),
+        null=True,
+        blank=True,
+        help_text=_("When this todo item was moved to ongoing"),
+    )
+    completed_at = models.DateTimeField(
+        _("completed at"),
+        null=True,
+        blank=True,
+        help_text=_("When this todo item was completed"),
+    )
+    updated_at = models.DateTimeField(
+        _("updated at"),
+        auto_now=True,
+        help_text=_("When this todo item was last updated"),
+    )
+    
+    class Meta:
+        verbose_name = _("todo item")
+        verbose_name_plural = _("todo items")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "status"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["created_at"]),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username} - {self.title} ({self.status})"
+    
+    def move_to_ongoing(self):
+        """Move todo item to ongoing status and set started_at timestamp."""
+        from django.utils import timezone
+        if self.status == "TODO":
+            self.status = "ONGOING"
+            self.started_at = timezone.now()
+            self.save()
+    
+    def move_to_done(self):
+        """Move todo item to done status and set completed_at timestamp."""
+        from django.utils import timezone
+        if self.status in ["TODO", "ONGOING"]:
+            self.status = "DONE"
+            self.completed_at = timezone.now()
+            if not self.started_at:
+                self.started_at = timezone.now()
+            self.save()
+
+
 # Create your models here.
+
+
+class DelegatedDuty(models.Model):
+    """
+    Duty delegated by an admin (or any staff) to a specific user.
+    Used for dashboard notifications for all users and admins.
+    """
+
+    PRIORITY_CHOICES = [
+        ("LOW", _("Low")),
+        ("MEDIUM", _("Medium")),
+        ("HIGH", _("High")),
+        ("URGENT", _("Urgent")),
+    ]
+
+    STATUS_CHOICES = [
+        ("Pending", _("Pending")),
+        ("In Progress", _("In Progress")),
+        ("Completed", _("Completed")),
+        ("Overdue", _("Overdue")),
+    ]
+
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="duties_assigned",
+        verbose_name=_("assigned by"),
+    )
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="duties_received",
+        verbose_name=_("assigned to"),
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="LOW")
+    due_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["assigned_to", "status"]),
+            models.Index(fields=["due_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.title} → {self.assigned_to.get_full_name() or self.assigned_to.username}"
