@@ -30,7 +30,13 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "172.16.20.10",
-    ".pythonanywhere.com",  # Allow all PythonAnywhere subdomains
+    ".pythonanywhere.com",
+    "staff-attendance-production.up.railway.app",
+    ".up.railway.app",  # optional if you want all Railway subdomains
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://staff-attendance-production.up.railway.app",
 ]
 
 
