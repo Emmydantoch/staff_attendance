@@ -24,15 +24,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-wm@00t9&e#5u&_@&_-2wxc-q20#uv@bwe%i*w0!sp!3@a484gp"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+DEBUG = False
 
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    "172.16.20.10",
-    ".pythonanywhere.com",
     "staff-attendance-production.up.railway.app",
-    ".up.railway.app",  # optional if you want all Railway subdomains
+    ".up.railway.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [

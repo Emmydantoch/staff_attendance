@@ -3,9 +3,9 @@ services:
     name: staff-attendance
     env: python
     buildCommand: python -m pip install -r requirements.txt && python manage.py collectstatic --noinput
-    startCommand: python -m gunicorn staff_attendance.wsgi:application
+    startCommand: python manage.py migrate && python -m gunicorn staff_attendance.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: staff_attendance.settings
       - key: PYTHONUNBUFFERED
-        value: 1
+        value: "1"
